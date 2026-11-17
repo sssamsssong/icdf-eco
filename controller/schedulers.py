@@ -5,7 +5,9 @@
 - 작업: 필요한 슬롯 수(need)와 마감 슬롯(deadline)을 가짐. 쪼개서 실행 가능.
 - 계획(plan): plan[t] = 슬롯 t에 돌릴 작업 id 목록 (최대 FANS_PER_RACK개).
 """
-from dataclasses import dataclass, field
+import json
+from dataclasses import dataclass
+from pathlib import Path
 
 from . import config
 
@@ -76,25 +78,46 @@ class CorrectingScheduler(FixedScheduler):
     """D2: 하루 전 계획을 유지하되, 오차가 이어질 것 같고 옮기는 이득이 람다보다 클 때만 고칩니다.
 
     첫 버전 로직:
-    1. 오차 Δ = 관측 - 예측. 이동평균(EMA)으로 지금 오차 수준을 추정.
-    2. 앞으로 h슬롯 뒤 오차 = EMA x DECAY^h 로 남은 시간 예측을 갱신.
+    1. 오차 Δ = 관측 - 예측을 매 슬롯 기록.
+    2. 앞으로 h슬롯 뒤 오차를 추정해 남은 시간 예측을 갱신.
+       - config.ERROR_MODEL = "rule"   : EMA x DECAY^h
+       - config.ERROR_MODEL = "learned": 최근 오차 8칸으로 h칸 뒤 오차를 맞추는 학습 모델 (error_model.json)
     3. 이번 슬롯에 계획된 유연 작업마다, 마감 안의 뒤쪽 빈 슬롯 중 갱신 예측이 가장 낮은 곳을 찾음.
     4. 이득 = (지금 갱신 예측 - 그 슬롯 갱신 예측) x kWh 가 람다보다 크면 옮김.
-    TODO: 오차 지속 추정을 학습 모델로 바꾸기, 변경을 되돌리는(당겨오는) 경우 처리.
+    TODO: 변경을 되돌리는(당겨오는) 경우 처리.
     """
     name = "D2"
+    MODEL_PATH = Path(__file__).resolve().parent / "error_model.json"
 
     def __init__(self, jobs, forecast):
         super().__init__(jobs, forecast)
         self.err_ema = 0.0
+        self.errors: list[float] = []
         self.log: list[str] = []
+        self.model = None
+        if config.ERROR_MODEL == "learned":
+            self.model = json.loads(self.MODEL_PATH.read_text(encoding="utf-8"))
+
+    def future_error(self, h: int) -> float:
+        """h칸 뒤 오차 추정."""
+        if self.model is None:
+            return self.err_ema * (config.ERROR_DECAY ** h)
+        if h == 0:
+            return self.errors[-1]
+        m = self.model
+        k = min(h, m["h_max"]) - 1
+        recent = self.errors[::-1][:m["lags"]]
+        recent += [0.0] * (m["lags"] - len(recent))   # 하루 시작 직후는 0으로 채움
+        return m["intercept"][k] + sum(c * e for c, e in zip(m["coef"][k], recent))
 
     def updated_forecast(self, t: int, h: int) -> float:
-        return self.forecast[t + h] + self.err_ema * (config.ERROR_DECAY ** h)
+        return self.forecast[t + h] + self.future_error(h)
 
     def step(self, t: int, observed: float) -> list[str]:
         a = config.ERROR_EMA_ALPHA
-        self.err_ema = a * (observed - self.forecast[t]) + (1 - a) * self.err_ema
+        err = observed - self.forecast[t]
+        self.err_ema = a * err + (1 - a) * self.err_ema
+        self.errors.append(err)
 
         for jid in list(self.plan[t]):
             job = self.jobs[jid]

@@ -17,6 +17,7 @@ LAMBDA_G = 10.0             # 변경 비용 람다 (gCO2). 0이면 매번 재계
 ERROR_EMA_ALPHA = 0.5       # 오차 이동평균 가중치 (클수록 최근 오차에 민감)
 ERROR_DECAY = 0.85          # 오차가 한 슬롯 뒤에 남는 비율 (단기 예측). 0이면 바로 사라진다고 봄
 MAX_CHANGES_PER_DAY = 20    # 변경 예산
+ERROR_MODEL = "learned"        # "rule" = EMA x DECAY^h 규칙 / "learned" = controller/error_model.json (sim/train_error_persistence.py)
 
 # LED 표시 범위 (gCO2/kWh → 0~100)
 LED_MIN_G = 50
