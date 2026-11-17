@@ -11,6 +11,8 @@ from pathlib import Path
 
 from . import config
 
+WARN = True  # 하루 전 계획에서 마감 안에 다 못 넣었을 때 경고 출력
+
 
 @dataclass
 class Job:
@@ -51,7 +53,7 @@ def plan_day_ahead(jobs: list[Job], forecast: list[float]) -> list[list[str]]:
             if len(plan[t]) < cap:
                 plan[t].append(job.id)
                 placed += 1
-        if placed < job.need:
+        if placed < job.need and WARN:
             print(f"경고: {job.id}를 마감 안에 다 배치하지 못했습니다 ({placed}/{job.need})")
     return plan
 
@@ -89,17 +91,30 @@ class CorrectingScheduler(FixedScheduler):
     name = "D2"
     MODEL_PATH = Path(__file__).resolve().parent / "error_model.json"
 
-    def __init__(self, jobs, forecast):
+    _model_cache = None
+
+    def __init__(self, jobs, forecast, lam: float | None = None, error_model: str | None = None,
+                 max_changes: int | None = None):
+        """lam, error_model, max_changes를 안 주면 config 값을 씁니다 (장기 시뮬레이션에서 바꿔 가며 사용).
+        error_model: "learned" (D2) / "delta" = 지금 슬롯 오차만 반영, 미래는 원래 예측대로 (D1) / "rule" = EMA x DECAY^h
+        """
         super().__init__(jobs, forecast)
+        self.lam = config.LAMBDA_G if lam is None else lam
+        self.error_model = error_model or config.ERROR_MODEL
+        self.max_changes = config.MAX_CHANGES_PER_DAY if max_changes is None else max_changes
         self.err_ema = 0.0
         self.errors: list[float] = []
         self.log: list[str] = []
         self.model = None
-        if config.ERROR_MODEL == "learned":
-            self.model = json.loads(self.MODEL_PATH.read_text(encoding="utf-8"))
+        if self.error_model == "learned":
+            if CorrectingScheduler._model_cache is None:
+                CorrectingScheduler._model_cache = json.loads(self.MODEL_PATH.read_text(encoding="utf-8"))
+            self.model = CorrectingScheduler._model_cache
 
     def future_error(self, h: int) -> float:
         """h칸 뒤 오차 추정."""
+        if self.error_model == "delta":
+            return self.errors[-1] if h == 0 else 0.0
         if self.model is None:
             return self.err_ema * (config.ERROR_DECAY ** h)
         if h == 0:
@@ -119,22 +134,25 @@ class CorrectingScheduler(FixedScheduler):
         self.err_ema = a * err + (1 - a) * self.err_ema
         self.errors.append(err)
 
+        upd = None  # 갱신 예측 곡선. 필요할 때 슬롯마다 한 번만 계산
         for jid in list(self.plan[t]):
             job = self.jobs[jid]
-            if job.urgent or self.changes >= config.MAX_CHANGES_PER_DAY:
+            if job.urgent or self.changes >= self.max_changes:
                 continue
-            now_val = self.updated_forecast(t, 0)
+            if upd is None:
+                upd = [self.updated_forecast(t, h) for h in range(len(self.forecast) - t)]
+            now_val = upd[0]
             best_t, best_val = None, now_val
             for t2 in range(t + 1, job.deadline):
                 if len(self.plan[t2]) >= config.FANS_PER_RACK or jid in self.plan[t2]:
                     continue
-                v = self.updated_forecast(t, t2 - t)
+                v = upd[t2 - t]
                 if v < best_val:
                     best_t, best_val = t2, v
             if best_t is None:
                 continue
             gain_g = (now_val - best_val) * config.KWH_PER_SLOT
-            if gain_g > config.LAMBDA_G:
+            if gain_g > self.lam:
                 self.plan[t].remove(jid)
                 self.plan[best_t].append(jid)
                 self.changes += 1

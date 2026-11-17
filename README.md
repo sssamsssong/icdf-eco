@@ -16,7 +16,7 @@
 | `data/` | 영국 탄소 데이터 내려받기 스크립트. 받은 CSV는 git에 올리지 않음 | 메인 PC |
 | `gui/` | 대시보드 화면 (아직 비어 있음) | 메인 PC |
 | `jetson/` | AI 작업 실행과 전력 측정 (아직 뼈대만 있음) | Jetson 2대 |
-| `sim/` | 하루 전 예측 학습 (`train_forecast.py`), 오차 지속 학습 (`train_error_persistence.py`), 장기 시뮬레이션 (아직 없음) | 메인 PC |
+| `sim/` | 하루 전 예측 학습 (`train_forecast.py`), 오차 지속 학습 (`train_error_persistence.py`), 장기 시뮬레이션 (`run_longterm.py`) | 메인 PC |
 | `docs/` | 배선도, 시스템 흐름도, 프로젝트 설명 | |
 
 ## 처음 설정 (데스크톱)
@@ -71,5 +71,5 @@ pip install -r requirements.txt
 - [ ] Jetson 작업 실행과 전력 전송
 - [x] 하루 전 예측 모델 첫 버전 (Ridge, 기준선보다 MAE 약 15% 낮음) → `sim/README.md`
 - [x] 당일 오차 지속 모델 (D2가 사용, 평균 MAE 28.4 vs D1 33.7) → `sim/README.md`
-- [ ] D1 vs D2, 람다별 결과 곡선 (장기 시뮬레이션에서)
-- [ ] NESO 장기 시뮬레이션 (A, B, C, D1, D2, 완벽 예측 비교)
+- [x] 장기 시뮬레이션: D2 회복률 9.6%, 변경은 매 시점 재계획의 절반 → `sim/README.md`
+- [ ] 보정에 '앞당기기' 추가, 작업 큐 현실화
