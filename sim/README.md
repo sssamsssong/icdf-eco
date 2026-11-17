@@ -3,12 +3,12 @@
 ## 하루 전 예측 모델 학습 (`train_forecast.py`)
 
 ```bash
-python data/fetch_uk_carbon.py --start 2017-09-12 --end 2026-11-17   # 전체 데이터, 몇 분 걸림
+# 2017-09-12 ~ 2026-11-16 데이터는 저장소에 포함되어 있어 바로 학습 가능
 python sim/train_forecast.py
 ```
 
 - 16초 정도 걸립니다. 기준선 3개와 Ridge, GradientBoosting의 MAE를 비교합니다.
-- 가장 좋은 모델은 `models/dayahead.joblib`, 2024년 이후 예측은 `data/forecast/dayahead_ours.csv`에 저장됩니다.
+- 가장 좋은 모델은 `models/dayahead.joblib`(저장소에 안 올림), 2024년 이후 예측은 `data/forecast/dayahead_ours.csv`(저장소에 포함)에 저장됩니다.
 - 시연 엔진에서 우리 예측을 쓰려면 `python -m controller.main --day 2025-03-10 --ours ...`
 - D일 예측은 D-1일 낮 12시(UTC)에 낸다고 가정합니다 (`--cutoff 24`).
 

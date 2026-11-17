@@ -4,9 +4,7 @@ __pycache__/
 .venv/
 venv/
 
-# 데이터와 결과 (용량이 커서 올리지 않음, 각자 스크립트로 받기)
-data/raw/
-data/forecast/
+# 결과와 모델 (데이터 CSV는 약 5MB라 저장소에 포함)
 models/
 logs/
 *.pt

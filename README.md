@@ -37,6 +37,7 @@ pip install -r requirements.txt
    python data/fetch_uk_carbon.py --start 2024-01-01 --end 2024-03-01
    ```
    `data/raw/uk_carbon_20240101_20240301.csv`가 생깁니다.
+   2017-09-12 ~ 2026-11-16 전체 데이터(`uk_carbon_20170912_20261117.csv`, 4MB)는 이미 저장소에 들어 있으니, 그 뒤 날짜가 필요할 때만 받으면 됩니다.
 3. **시연 엔진 실행**: 아두이노 없이 먼저 확인하려면 `--dry-run`을 붙입니다.
    ```bash
    python -m controller.main --day 2024-01-15 --dry-run
