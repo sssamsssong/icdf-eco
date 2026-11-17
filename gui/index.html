@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>탄소 인지 스케줄러 시연</title>
+<style>
+/* 부스 모니터용. 목업(GUI_목업)과 같은 색. 인터넷 없이도 뜨도록 글꼴은 PC에 있는 것만 씀 */
+:root {
+  --bg: #0e1412;
+  --panel: #151d1a;
+  --panel-2: #1b2521;
+  --line: #273430;
+  --fg: #e6ece9;
+  --muted: #8fa099;
+  --clean: #3fbf8a;
+  --mid: #e2b33a;
+  --dirty: #e0655a;
+  --d2: #f0a24b;
+  --b: #a9bcb5;
+  --ui: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --num: Consolas, "D2Coding", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--ui); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 1600px; margin: 0 auto; padding: 18px 20px 28px; display: grid; gap: 14px; }
+button { font: inherit; color: inherit; }
+button:focus-visible { outline: 2px solid var(--d2); outline-offset: 2px; }
+
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+header h1 { margin: 0; font-size: 1.35rem; font-weight: 700; }
+header .sub { color: var(--muted); font-size: 0.9rem; }
+.clock { margin-left: auto; display: flex; align-items: baseline; gap: 12px; }
+.clock .t { font-family: var(--num); font-size: 2.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.clock .s { color: var(--muted); font-size: 0.9rem; min-width: 12em; }
+.btns { display: flex; gap: 8px; }
+.btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px; padding: 9px 18px; font-weight: 700; cursor: pointer; }
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.start { border-color: color-mix(in srgb, var(--clean) 60%, transparent); }
+.btn.cloud[aria-pressed="true"] { background: var(--dirty); border-color: var(--dirty); color: var(--bg); }
+
+.grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); gap: 14px; align-items: start; }
+.col { display: grid; gap: 14px; min-width: 0; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
+.panel h2 { margin: 0; font-size: 0.85rem; font-weight: 600; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.8rem; color: var(--muted); }
+.legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 6px; }
+.legend i.box { height: 10px; border: 0; }
+svg { display: block; width: 100%; height: auto; }
+svg text { fill: var(--muted); font-family: var(--num); font-size: 11px; }
+
+.rack { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 14px; border-radius: 8px; background: var(--panel-2); border-left: 4px solid var(--c); }
+.rack .name { font-weight: 700; font-size: 1.05rem; }
+.rack .tag { color: var(--muted); font-size: 0.82rem; grid-column: 1 / -1; margin-top: -4px; }
+.rack .co2 { font-family: var(--num); font-size: 1.9rem; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; grid-row: 1 / 3; grid-column: 2; align-self: center; }
+.rack .co2 small { font-size: 0.8rem; color: var(--muted); font-weight: 400; margin-left: 3px; }
+.rack .row { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 0.85rem; }
+.rack .row b { color: var(--fg); font-family: var(--num); }
+.fans { display: flex; gap: 6px; }
+.fan { width: 26px; height: 26px; color: var(--line); }
+.fan.on { color: var(--c); animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .fan.on { animation: none; } }
+.diff { font-size: 0.95rem; padding: 2px 2px 0; }
+.diff b { font-family: var(--num); color: var(--d2); }
+
+.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 300px; overflow-y: auto; }
+.log li { display: grid; grid-template-columns: auto 1fr; gap: 10px; font-size: 0.88rem; padding: 6px 8px; background: var(--panel-2); border-radius: 6px; }
+.log .when { font-family: var(--num); color: var(--d2); }
+.log .what small { color: var(--muted); }
+.empty { color: var(--muted); font-size: 0.88rem; }
+
+footer { color: var(--muted); font-size: 0.78rem; display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.offline { color: var(--dirty); font-weight: 700; }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+  .clock { margin-left: 0; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>탄소 인지 AI 데이터센터 스케줄러</h1>
+      <div class="sub" id="sub">엔진에 연결하는 중…</div>
+    </div>
+    <div class="clock">
+      <span class="t" id="clock">--:--</span>
+      <span class="s" id="status"></span>
+    </div>
+    <div class="btns">
+      <button class="btn start" id="btnStart" type="button">시작</button>
+      <button class="btn cloud" id="btnCloud" type="button" aria-pressed="false">구름 올리기</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <section class="panel">
+        <h2>탄소 집약도 (gCO₂/kWh) <span id="nowVal"></span></h2>
+        <svg id="chart" viewBox="0 0 960 300" role="img" aria-label="하루 전 예측과 실제 탄소 집약도"></svg>
+        <div class="legend">
+          <span><i style="border-top-style:dashed;border-color:var(--muted)"></i>하루 전 예측</span>
+          <span><i style="border-color:var(--fg)"></i>실제 (구름 포함)</span>
+          <span><i class="box" style="background:color-mix(in srgb,var(--dirty) 25%,transparent)"></i>구름이 있던 시간</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>작업 일정 <span>칸 하나 = 30분, 위아래 두 줄 = 팬 두 개</span></h2>
+        <svg id="sched" viewBox="0 0 960 150" role="img" aria-label="두 랙의 작업 일정"></svg>
+        <div class="legend">
+          <span><i class="box" style="background:var(--b)"></i>실행함</span>
+          <span><i class="box" style="background:color-mix(in srgb,var(--b) 30%,transparent)"></i>실행 예정</span>
+          <span><i class="box" style="outline:2px solid var(--d2);outline-offset:-2px"></i>D2가 옮겨 온 작업</span>
+          <span><i class="box" style="outline:1px dashed var(--d2);outline-offset:-1px"></i>D2가 비운 자리</span>
+        </div>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel">
+        <h2>누적 탄소 배출</h2>
+        <div class="rack" style="--c:var(--b)">
+          <div class="name">B 랙</div>
+          <div class="co2" id="co2B">0<small>g</small></div>
+          <div class="tag">하루 전 계획을 그대로 실행 (구글 방식)</div>
+          <div class="row"><span class="fans" id="fansB"></span><span>계획 변경 <b id="chB">0</b>회</span></div>
+        </div>
+        <div class="rack" style="--c:var(--d2)">
+          <div class="name">D2 랙</div>
+          <div class="co2" id="co2D2">0<small>g</small></div>
+          <div class="tag">오차가 이어질 때만 계획 수정 (우리 방식)</div>
+          <div class="row"><span class="fans" id="fansD2"></span><span>계획 변경 <b id="chD2">0</b>회</span></div>
+        </div>
+        <div class="diff" id="diff"></div>
+      </section>
+
+      <section class="panel">
+        <h2>D2가 바꾼 계획</h2>
+        <ul class="log" id="log"></ul>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    <span id="foot"></span>
+    <span>데이터: 영국 Carbon Intensity API (NESO, CC BY 4.0)</span>
+  </footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+const FAN = '<svg class="fan" viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="12" cy="12" r="2.4"/><path d="M12 2.5c2.6 0 3.6 3.3 1.6 7.1L12 9.6 10.4 9.6C8.4 5.8 9.4 2.5 12 2.5z"/><path d="M12 2.5c2.6 0 3.6 3.3 1.6 7.1L12 9.6 10.4 9.6C8.4 5.8 9.4 2.5 12 2.5z" transform="rotate(120 12 12)"/><path d="M12 2.5c2.6 0 3.6 3.3 1.6 7.1L12 9.6 10.4 9.6C8.4 5.8 9.4 2.5 12 2.5z" transform="rotate(240 12 12)"/></g></svg>';
+
+const hhmm = (t) => `${String(Math.floor(t / 2)).padStart(2, "0")}:${t % 2 ? "30" : "00"}`;
+const fmt = (v) => Math.round(v).toLocaleString("ko-KR");
+const level = (v) => (v < 150 ? "var(--clean)" : v < 250 ? "var(--mid)" : "var(--dirty)");
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+// ---------- 탄소 그래프 ----------
+function drawChart(s) {
+  const svg = $("chart");
+  svg.textContent = "";
+  const W = 960, H = 300, L = 44, R = 12, T = 12, B = 26;
+  const n = s.slots;
+  const all = s.forecast.concat(s.observed);
+  const ymax = Math.max(100, Math.ceil((Math.max(...all) + 20) / 50) * 50);
+  const x = (t) => L + (t + 0.5) * (W - L - R) / n;
+  const y = (v) => T + (1 - v / ymax) * (H - T - B);
+  const cw = (W - L - R) / n;
+
+  for (let v = 0; v <= ymax; v += ymax > 300 ? 100 : 50) {
+    el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "var(--line)" }, svg);
+    el("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end" }, svg).textContent = v;
+  }
+  for (let t = 0; t <= n; t += 12) {
+    el("text", { x: L + t * cw, y: H - 6, "text-anchor": t === n ? "end" : "middle" }, svg).textContent = t === n ? "24:00" : hhmm(t);
+  }
+  s.cloud_hist.forEach((c, t) => {
+    if (c) el("rect", { x: L + t * cw, y: T, width: cw + 0.5, height: H - T - B,
+                        fill: "color-mix(in srgb, var(--dirty) 22%, transparent)" }, svg);
+  });
+  el("polyline", { points: s.forecast.map((v, t) => `${x(t)},${y(v)}`).join(" "), fill: "none",
+                   stroke: "var(--muted)", "stroke-width": 2, "stroke-dasharray": "6 5" }, svg);
+  if (s.observed.length) {
+    const pts = s.observed.map((v, t) => `${x(t)},${y(v)}`);
+    el("polygon", { points: `${x(0)},${y(0)} ${pts.join(" ")} ${x(s.observed.length - 1)},${y(0)}`,
+                    fill: "color-mix(in srgb, var(--fg) 6%, transparent)" }, svg);
+    el("polyline", { points: pts.join(" "), fill: "none", stroke: "var(--fg)", "stroke-width": 2.5,
+                     "stroke-linejoin": "round" }, svg);
+    const t = s.observed.length - 1, v = s.observed[t];
+    if (s.status === "running") {
+      el("line", { x1: x(t), x2: x(t), y1: T, y2: H - B, stroke: "var(--fg)", "stroke-opacity": 0.35 }, svg);
+    }
+    el("circle", { cx: x(t), cy: y(v), r: 6, fill: level(v), stroke: "var(--bg)", "stroke-width": 2 }, svg);
+  }
+}
+
+// ---------- 작업 일정 ----------
+function drawSched(s) {
+  const svg = $("sched");
+  svg.textContent = "";
+  const W = 960, L = 44, R = 12, n = s.slots;
+  const cw = (W - L - R) / n, ch = 18, gap = 2;
+  const rows = [["B", "var(--b)", 14], ["D2", "var(--d2)", 74]];
+  const pB = s.racks.B.plan, pD = s.racks.D2.plan;
+
+  for (const [name, color, top] of rows) {
+    el("text", { x: L - 8, y: top + ch + 4, "text-anchor": "end", style: "font-weight:700;font-size:15px;fill:var(--fg)" }, svg).textContent = name;
+    const plan = s.racks[name].plan;
+    for (let t = 0; t < n; t++) {
+      for (let k = 0; k < 2; k++) {
+        const filled = plan[t] > k;
+        const done = t <= s.slot && s.status !== "ready";
+        const r = el("rect", { x: L + t * cw + 1, y: top + k * (ch + gap), width: cw - 2, height: ch, rx: 2 }, svg);
+        if (filled) {
+          r.setAttribute("fill", color);
+          r.setAttribute("fill-opacity", done ? 1 : 0.3);
+        } else {
+          r.setAttribute("fill", "var(--panel-2)");
+        }
+        if (name === "D2") {
+          // B와 같은 출발 계획에서 달라진 칸 표시
+          if (filled && k >= pB[t]) { r.setAttribute("stroke", "var(--d2)"); r.setAttribute("stroke-width", 2); }
+          if (!filled && k < pB[t]) { r.setAttribute("stroke", "var(--d2)"); r.setAttribute("stroke-dasharray", "3 2"); }
+        }
+      }
+    }
+  }
+  for (let t = 0; t <= n; t += 12) {
+    el("text", { x: L + t * cw, y: 146, "text-anchor": t === n ? "end" : "middle" }, svg).textContent = t === n ? "24:00" : hhmm(t);
+  }
+  if (s.status === "running") {
+    const xx = L + (s.slot + 0.5) * cw;
+    el("line", { x1: xx, x2: xx, y1: 8, y2: 130, stroke: "var(--fg)", "stroke-opacity": 0.5 }, svg);
+  }
+}
+
+// ---------- 오른쪽 패널 ----------
+function drawRacks(s) {
+  for (const name of ["B", "D2"]) {
+    const r = s.racks[name];
+    $("co2" + name).firstChild.nodeValue = fmt(r.co2);
+    $("ch" + name).textContent = r.changes;
+    const fans = $("fans" + name);
+    if (!fans.children.length) fans.innerHTML = FAN + FAN;
+    [...fans.children].forEach((f, i) => f.classList.toggle("on", s.status === "running" && r.running > i));
+  }
+  const b = s.racks.B.co2, d = s.racks.D2.co2, dd = b - d;
+  const diff = $("diff");
+  if (s.status === "ready") diff.textContent = "같은 작업, 같은 마감, 같은 탄소 신호로 두 랙을 동시에 돌립니다.";
+  else if (Math.abs(dd) < 1) diff.textContent = "아직 두 랙의 배출량이 같습니다.";
+  else if (dd > 0) diff.innerHTML = `D2가 B보다 <b>${fmt(dd)} g</b> 덜 배출 (${(dd / b * 100).toFixed(1)}%)`;
+  else diff.innerHTML = `지금은 D2가 B보다 <b>${fmt(-dd)} g</b> 더 배출 (미뤄 둔 작업을 돌리는 중)`;
+}
+
+function drawLog(s) {
+  const ul = $("log");
+  ul.textContent = "";
+  if (!s.events.length) {
+    const li = document.createElement("li");
+    li.className = "empty";
+    li.style.background = "none";
+    li.textContent = "아직 없음. 잠깐 지나가는 구름에는 계획을 바꾸지 않습니다.";
+    ul.appendChild(li);
+    return;
+  }
+  for (const e of [...s.events].reverse()) {
+    const li = document.createElement("li");
+    const when = document.createElement("span");
+    when.className = "when";
+    when.textContent = hhmm(e.t);
+    const what = document.createElement("span");
+    what.className = "what";
+    what.append(`${e.job} → ${hhmm(e.to)}로 미룸 `);
+    const sm = document.createElement("small");
+    sm.textContent = `예상 이득 ${e.gain} g`;
+    what.appendChild(sm);
+    li.append(when, what);
+    ul.appendChild(li);
+  }
+}
+
+function drawHead(s) {
+  const sec = s.slots * s.seconds_per_slot;
+  const dur = sec >= 60 ? `약 ${Math.round(sec / 60)}분` : `약 ${Math.round(sec)}초`;
+  $("sub").textContent = `영국 전력망 ${s.day} 하루를 ${dur}으로 재생`;
+  $("clock").textContent = s.status === "ready" ? "00:00" : hhmm(s.slot);
+  $("status").textContent = { ready: "시작을 누르세요", running: "재생 중", done: "하루 끝" }[s.status];
+  const st = $("btnStart");
+  st.disabled = s.status === "running";
+  st.textContent = s.status === "done" ? "다시 시작" : s.status === "running" ? "재생 중" : "시작";
+  const c = $("btnCloud");
+  c.setAttribute("aria-pressed", String(s.cloud));
+  c.textContent = s.cloud ? "구름 걷기" : "구름 올리기";
+  const v = s.observed.length ? s.observed[s.observed.length - 1] : null;
+  $("nowVal").textContent = v == null ? "" : `지금 ${fmt(v)}`;
+  $("foot").textContent = `탄소는 실제 탄소 집약도 × 가정 전력량(작업 1개, 30분에 ${s.kwh} kWh)으로 계산한 추정치 · 람다 ${s.lam} g · ${s.hardware}`;
+}
+
+let last = null;
+async function poll() {
+  try {
+    const res = await fetch("/state", { cache: "no-store" });
+    const s = await res.json();
+    if (s.forecast) {
+      last = s;
+      drawHead(s); drawChart(s); drawSched(s); drawRacks(s); drawLog(s);
+    }
+  } catch (e) {
+    $("status").innerHTML = '<span class="offline">엔진 연결 끊김</span>';
+  }
+}
+
+async function post(path) {
+  try { await fetch(path, { method: "POST" }); } catch (e) {}
+  poll();
+}
+// 클릭 후 포커스를 빼서 스페이스/엔터가 버튼을 한 번 더 누르지 않게 함
+$("btnStart").onclick = (e) => { e.currentTarget.blur(); post("/start"); };
+$("btnCloud").onclick = (e) => { e.currentTarget.blur(); post("/cloud"); };
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space") { e.preventDefault(); post("/cloud"); }
+  else if (e.key === "Enter" && (!last || last.status !== "running")) { e.preventDefault(); post("/start"); }
+});
+
+poll();
+setInterval(poll, 250);
+</script>
+</body>
+</html>

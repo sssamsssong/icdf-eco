@@ -105,6 +105,7 @@ class CorrectingScheduler(FixedScheduler):
         self.err_ema = 0.0
         self.errors: list[float] = []
         self.log: list[str] = []
+        self.events: list[dict] = []   # GUI용 변경 기록
         self.model = None
         if self.error_model == "learned":
             if CorrectingScheduler._model_cache is None:
@@ -157,5 +158,6 @@ class CorrectingScheduler(FixedScheduler):
                 self.plan[best_t].append(jid)
                 self.changes += 1
                 self.log.append(f"t={t}: {jid} → t={best_t} (이득 {gain_g:.1f} g)")
+                self.events.append({"t": t, "job": jid, "to": best_t, "gain": round(gain_g, 1)})
 
         return super().step(t, observed)
