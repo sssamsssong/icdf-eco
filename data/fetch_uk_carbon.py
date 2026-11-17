@@ -31,8 +31,8 @@ def fetch(start: datetime, end: datetime) -> list[dict]:
             t = d["from"]
             if start.strftime("%Y-%m-%dT%H:%MZ") <= t < end.strftime("%Y-%m-%dT%H:%MZ"):
                 rows[t] = {"time_utc": t,
-                           "forecast": d["intensity"]["forecast"],
-                           "actual": d["intensity"]["actual"]}
+                           "forecast": d["intensity"].get("forecast"),
+                           "actual": d["intensity"].get("actual")}
         cur = nxt
         time.sleep(0.5)  # 서버에 부담 주지 않게
     return [rows[k] for k in sorted(rows)]

@@ -33,8 +33,8 @@ def to_led(g: float) -> int:
     return round((g - config.LED_MIN_G) / (config.LED_MAX_G - config.LED_MIN_G) * 100)
 
 
-def run(day: str, port: str | None, dry_run: bool, cloud_slots: set[int] = frozenset()):
-    forecast, actual = load_day(day)
+def run(day: str, port: str | None, dry_run: bool, cloud_slots: set[int] = frozenset(), ours: bool = False):
+    forecast, actual = load_day(day, ours)
     racks = [FixedScheduler(default_jobs(), forecast), CorrectingScheduler(default_jobs(), forecast)]
     arduino = Arduino(port, dry_run)
     co2 = {r.name: 0.0 for r in racks}
@@ -106,6 +106,7 @@ def main():
     ap.add_argument("--port", help="아두이노 포트, 예: COM3")
     ap.add_argument("--dry-run", action="store_true", help="아두이노 없이 실행")
     ap.add_argument("--cloud", help="구름 슬롯 범위 미리 지정, 예: 20-30 (리허설/테스트용)")
+    ap.add_argument("--ours", action="store_true", help="API forecast 대신 우리 하루 전 예측 사용")
     ap.add_argument("--fast", action="store_true", help="슬롯 대기 없이 바로 끝까지 (테스트용)")
     args = ap.parse_args()
     if args.fast:
@@ -114,7 +115,7 @@ def main():
     if args.cloud:
         a, b = map(int, args.cloud.split("-"))
         cloud_slots = set(range(a, b + 1))
-    run(args.day, args.port, args.dry_run, cloud_slots)
+    run(args.day, args.port, args.dry_run, cloud_slots, args.ours)
 
 
 if __name__ == "__main__":
