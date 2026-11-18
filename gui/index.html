@@ -63,6 +63,9 @@ svg text { fill: var(--muted); font-family: var(--num); font-size: 11px; }
 .fan.on { color: var(--c); animation: spin 0.6s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .fan.on { animation: none; } }
+.rack .jet { grid-column: 1 / -1; color: var(--muted); font-size: 0.82rem; }
+.rack .jet b { color: var(--fg); font-family: var(--num); font-weight: 600; }
+.rack .jet[hidden] { display: none; }
 .diff { font-size: 0.95rem; padding: 2px 2px 0; }
 .diff b { font-family: var(--num); color: var(--d2); }
 
@@ -130,12 +133,14 @@ footer { color: var(--muted); font-size: 0.78rem; display: flex; flex-wrap: wrap
           <div class="co2" id="co2B">0<small>g</small></div>
           <div class="tag">하루 전 계획을 그대로 실행 (구글 방식)</div>
           <div class="row"><span class="fans" id="fansB"></span><span>계획 변경 <b id="chB">0</b>회</span></div>
+          <div class="jet" id="jetB" hidden></div>
         </div>
         <div class="rack" style="--c:var(--d2)">
           <div class="name">D2 랙</div>
           <div class="co2" id="co2D2">0<small>g</small></div>
           <div class="tag">오차가 이어질 때만 계획 수정 (우리 방식)</div>
           <div class="row"><span class="fans" id="fansD2"></span><span>계획 변경 <b id="chD2">0</b>회</span></div>
+          <div class="jet" id="jetD2" hidden></div>
         </div>
         <div class="diff" id="diff"></div>
       </section>
@@ -257,6 +262,16 @@ function drawRacks(s) {
     const fans = $("fans" + name);
     if (!fans.children.length) fans.innerHTML = FAN + FAN;
     [...fans.children].forEach((f, i) => f.classList.toggle("on", s.status === "running" && r.running > i));
+  }
+  for (const name of ["B", "D2"]) {
+    const box = $("jet" + name);
+    const j = s.jetson && s.jetson.racks[name];
+    box.hidden = !j;
+    if (!j) continue;
+    if (!j.online) { box.innerHTML = '<span class="offline">Jetson 연결 안 됨</span> · 가정 전력값만 사용'; continue; }
+    const w = j.watts == null ? "-" : j.watts.toFixed(1);
+    const scale = s.jetson.scale === 1 ? "" : ` ×${s.jetson.scale}`;
+    box.innerHTML = `Jetson 실측 <b>${w} W</b> (대기 ${j.idle_w ?? "-"} W) · 실측 탄소 <b>${j.co2.toFixed(1)} g</b>${scale}`;
   }
   const b = s.racks.B.co2, d = s.racks.D2.co2, dd = b - d;
   const diff = $("diff");

@@ -25,3 +25,16 @@ LED_MAX_G = 350
 
 # 시리얼
 BAUD = 115200
+
+# Jetson (jetson/agent.py). 비워 두면 Jetson 없이 지금과 똑같이 동작합니다.
+# 실행할 때 --jetson-b / --jetson-d2 로 덮어쓸 수 있습니다.
+JETSON_HOSTS = {
+    # "B": "http://10.0.0.11:8100",
+    # "D2": "http://10.0.0.12:8100",
+}
+JETSON_TIMEOUT_S = 0.3      # 요청 하나를 기다리는 최대 시간
+JETSON_RETRY_S = 5.0        # 연결이 끊기면 몇 초 뒤 다시 시도할지
+JETSON_SUBTRACT_IDLE = True # 대기 전력은 빼고 '작업 때문에 늘어난 전력'만 셈
+# 실측 탄소 = 칸 동안 잰 평균 W x 30분 x 탄소 집약도 x 이 배율.
+# 1이면 Jetson 그대로 (몇 g 수준). 서버 한 대 규모로 보이려면 키우세요 (스케줄러 결정에는 영향 없음).
+JETSON_POWER_SCALE = 1.0

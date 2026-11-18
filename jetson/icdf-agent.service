@@ -1,0 +1,22 @@
+# Jetson이 켜지면 agent.py를 자동으로 실행합니다.
+# 설치 (Jetson에서, 저장소를 ~/icdf-eco에 받았다고 가정. 사용자 이름이 다르면 User와 경로를 고치세요):
+#   sudo cp ~/icdf-eco/jetson/icdf-agent.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now icdf-agent
+# 상태와 로그:
+#   systemctl status icdf-agent
+#   journalctl -u icdf-agent -f
+[Unit]
+Description=ICDF_eco Jetson agent (AI job + power report)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=jetson
+WorkingDirectory=/home/jetson/icdf-eco/jetson
+ExecStart=/usr/bin/python3 -u agent.py --port 8100 --workers 2
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

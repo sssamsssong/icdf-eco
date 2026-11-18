@@ -7,6 +7,13 @@
 
 전체 설명은 [docs/프로젝트_설명.md](docs/프로젝트_설명.md), 지금까지 한 일은 [docs/진행상황.md](docs/진행상황.md), 영국 탄소 데이터 자료는 [docs/참고자료.md](docs/참고자료.md)에 있습니다.
 
+| 문서 | 언제 보나 |
+|---|---|
+| [docs/프로젝트_소개.md](docs/프로젝트_소개.md) | 프로젝트를 처음 접할 때 (쉬운 설명) |
+| [docs/시연_가이드.md](docs/시연_가이드.md) | 부스에서 시연을 켜고 설명할 때 |
+| [docs/아두이노_연결후_할일.md](docs/아두이노_연결후_할일.md) | 아두이노를 메인 PC에 처음 연결할 때 |
+| [docs/Jetson_연결후_할일.md](docs/Jetson_연결후_할일.md) | Jetson 2대를 연결할 때 |
+
 ## 폴더 구성
 
 | 폴더 | 내용 | 돌아가는 곳 |
@@ -15,7 +22,7 @@
 | `controller/` | 배속 시연 엔진. 탄소 신호 재생, B·D2 스케줄러, 아두이노 제어, CSV 기록 | 메인 PC |
 | `data/` | 영국 탄소 데이터 내려받기 스크립트. 받은 CSV는 git에 올리지 않음 | 메인 PC |
 | `gui/` | 시연 화면. 시연 엔진이 `--gui`로 띄움 | 메인 PC |
-| `jetson/` | AI 작업 실행과 전력 측정 (아직 뼈대만 있음) | Jetson 2대 |
+| `jetson/` | AI 작업 실행과 전력 측정 (`agent.py`). 연결 방법은 `jetson/README.md` | Jetson Orin Nano 2대 |
 | `sim/` | 하루 전 예측 학습 (`train_forecast.py`), 오차 지속 학습 (`train_error_persistence.py`), 장기 시뮬레이션 (`run_longterm.py`) | 메인 PC |
 | `docs/` | 배선도, 시스템 흐름도, 프로젝트 설명 | |
 
@@ -73,7 +80,7 @@ pip install -r requirements.txt
 - [ ] 리허설: 날짜, 구름 길이, 람다 정하기
 - [ ] 구름 입력을 키보드에서 센서로 바꿀지 결정
 - [x] 시연 화면 (`gui/index.html`)
-- [ ] Jetson 작업 실행과 전력 전송
+- [ ] Jetson 작업 실행과 전력 전송 (코드 완성, 가짜 Jetson으로 시험함. 실제 보드 연결 남음)
 - [x] 하루 전 예측 모델 첫 버전 (Ridge, 기준선보다 MAE 약 15% 낮음) → `sim/README.md`
 - [x] 당일 오차 지속 모델 (D2가 사용, 평균 MAE 28.4 vs D1 33.7) → `sim/README.md`
 - [x] 장기 시뮬레이션: D2 회복률 9.6%, 변경은 매 시점 재계획의 절반 → `sim/README.md`
