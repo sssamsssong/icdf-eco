@@ -7,6 +7,7 @@
 #   ./demo.sh 2025-06-15      날짜 바꾸기
 #   ./demo.sh --dry-run       아두이노 없이 화면만
 #   ./demo.sh --no-jetson     Jetson 없이
+#   ./demo.sh --ko            한국어 화면 (기본 화면은 영어)
 #   ./demo.sh --detail        자세한 화면 (단계·계산식·검증 표)
 #   ./demo.sh --classic       예전 화면으로 열기
 #   ./demo.sh --rehearsal     리허설: 30분 한 칸을 0.5초로 (하루 약 24초)
@@ -31,8 +32,9 @@ for a in "$@"; do
     --no-jetson) use_jetson=0 ;;
     --classic)   page="classic" ;;
     --detail)    page="detail" ;;
+    --ko)        page="ko" ;;
     --rehearsal) extra+=(--slot-seconds 0.5) ;;
-    -h|--help)   sed -n 2,14p "$0"; exit 0 ;;
+    -h|--help)   sed -n 2,15p "$0"; exit 0 ;;
     *)           extra+=("$a") ;;
   esac
 done

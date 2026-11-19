@@ -53,7 +53,7 @@ def start_server(shared: Shared, port: int = 8000) -> ThreadingHTTPServer:
         def do_GET(self):
             if self.path in ("/", "/index.html"):
                 self._send(GUI_HTML.read_bytes(), "text/html; charset=utf-8")
-            elif self.path.strip("/").removesuffix(".html") in ("classic", "detail"):  # 다른 화면 (자세한 화면, 예전 화면)
+            elif self.path.strip("/").removesuffix(".html") in ("classic", "detail", "ko"):  # 다른 화면 (자세한 화면, 예전 화면, 한국어 화면)
                 name = self.path.strip("/").removesuffix(".html") + ".html"
                 self._send(GUI_HTML.with_name(name).read_bytes(), "text/html; charset=utf-8")
             elif self.path.startswith("/state"):

@@ -13,6 +13,7 @@ SCENARIOS = {
     "1": {
         "key": "long",
         "title": "시나리오 1 · 긴 구름",
+        "title_en": "Scenario 1 · Long cloud",
         "day": "2025-09-14",
         "days": 1,
         "slot_seconds": 1.0,   # 하루 48초
@@ -24,6 +25,7 @@ SCENARIOS = {
     "2": {
         "key": "short",
         "title": "시나리오 2 · 짧은 구름 여러 번",
+        "title_en": "Scenario 2 · Several short clouds",
         "day": "2025-06-07",
         "days": 1,
         "slot_seconds": 1.0,   # 하루 48초
@@ -35,6 +37,7 @@ SCENARIOS = {
     "3": {
         "key": "free",
         "title": "시나리오 3 · 직접 구름을 올려 보세요",
+        "title_en": "Scenario 3 · Move the cloud yourself",
         "day": "2025-09-14",
         "days": 5,
         "slot_seconds": 1.0,   # 하루 48초, 5일 약 4분 (심사위원이 구름판을 옮길 시간은 충분)

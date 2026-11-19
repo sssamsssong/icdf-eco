@@ -46,6 +46,7 @@ icdf                 # = ./demo.sh  아두이노·Jetson을 찾아서 붙이고 
 icdf --dry-run       # 아두이노 없이
 icdf --no-jetson     # Jetson 없이
 icdf --rehearsal     # 리허설 (하루 약 24초)
+icdf --ko            # 한국어 화면 (기본 화면은 영어)
 icdf --detail        # 자세한 화면
 icdf --classic       # 예전 화면
 icdf 2025-06-15      # 날짜 바꾸기

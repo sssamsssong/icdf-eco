@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>탄소 인지 스케줄러 시연</title>
+<title>Carbon-Aware Scheduler Demo</title>
 <style>
-/* 부스 모니터용 기본 화면 (1920x1080, F11). 인터넷 없이 뜨도록 글꼴은 PC에 있는 것만 씀.
-   자세한 화면은 /detail, 예전 화면은 /classic */
+/* 부스 모니터용 기본 화면, 영어 (1920x1080, F11). 인터넷 없이 뜨도록 글꼴은 PC에 있는 것만 씀.
+   한국어 화면은 /ko (gui/ko.html), 자세한 화면은 /detail, 예전 화면은 /classic */
 :root {
   --bg: #0b110f;
   --panel: #131b18;
@@ -20,7 +20,7 @@
   --dirty: #e0655a;
   --d2: #f0a24b;
   --r: #7fb0e6;
-  --ui: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans CJK KR", system-ui, sans-serif;
+  --ui: "Segoe UI", "Helvetica Neue", Arial, "Malgun Gothic", "Noto Sans CJK KR", system-ui, sans-serif;
   --num: Consolas, "D2Coding", "DejaVu Sans Mono", ui-monospace, monospace;
   color-scheme: dark;
 }
@@ -120,57 +120,57 @@ footer .src { color: var(--faint); font-size: 0.78rem; }
 <div class="wrap">
   <header>
     <div>
-      <h1>탄소 인지 AI 데이터센터 스케줄러 <span class="scen" id="scen"></span></h1>
-      <div class="tagline">예측이 틀렸을 때, <b>AI가 오차를 다시 예측해서 꼭 필요할 때만</b> 계획을 고칩니다</div>
+      <h1>Carbon-Aware AI Data Center Scheduler <span class="scen" id="scen"></span></h1>
+      <div class="tagline">When the forecast is wrong, <b>AI predicts whether the error will last</b> and changes the plan <b>only when it pays off</b></div>
     </div>
     <div class="clock">
       <span class="t" id="clock">--:--</span>
-      <span class="s" id="status">연결하는 중…</span>
+      <span class="s" id="status">Connecting…</span>
     </div>
     <div class="sensor" id="sensor" hidden></div>
     <div class="btns">
-      <button class="btn start" id="btnStart" type="button">시작</button>
-      <button class="btn cloud" id="btnCloud" type="button" aria-pressed="false">구름 올리기</button>
+      <button class="btn start" id="btnStart" type="button">Start</button>
+      <button class="btn cloud" id="btnCloud" type="button" aria-pressed="false">Add cloud</button>
     </div>
   </header>
 
   <div class="grid">
     <section class="panel">
-      <h2><span>전기의 탄소 배출량 <span style="font-weight:400">(gCO₂/kWh · 낮을수록 깨끗한 전기)</span></span>
+      <h2><span>Grid carbon intensity <span style="font-weight:400">(gCO₂/kWh · lower = cleaner power)</span></span>
         <span class="legend">
-          <span><i style="border-top-style:dashed;border-color:var(--muted)"></i>하루 전 예측</span>
-          <span><i style="border-color:var(--fg)"></i>실제</span>
-          <span><i style="border-color:var(--d2)"></i>AI가 다시 본 예측</span>
+          <span><i style="border-top-style:dashed;border-color:var(--muted)"></i>Day-ahead forecast</span>
+          <span><i style="border-color:var(--fg)"></i>Actual</span>
+          <span><i style="border-color:var(--d2)"></i>AI-updated forecast</span>
         </span></h2>
-      <svg id="main" viewBox="0 0 1200 800" role="img" aria-label="탄소 배출량 그래프와 두 랙의 작업 일정"></svg>
+      <svg id="main" viewBox="0 0 1200 800" role="img" aria-label="Carbon intensity chart and job schedules of the racks"></svg>
       <div class="legend" style="margin-top:6px">
-        <span><i class="box" style="background:var(--clean)"></i>깨끗한 전기로 실행</span>
-        <span><i class="box" style="background:var(--mid)"></i>보통</span>
-        <span><i class="box" style="background:var(--dirty)"></i>더러운 전기로 실행</span>
-        <span><i class="box" style="background:var(--faint);opacity:.6"></i>실행 예정</span>
-        <span><i class="box" style="outline:2px dashed var(--d2);outline-offset:-2px"></i>미뤄서 비운 자리</span>
-        <span><i class="box" style="outline:2px solid var(--d2);outline-offset:-2px"></i>미뤄 온 작업</span>
+        <span><i class="box" style="background:var(--clean)"></i>Ran on clean power</span>
+        <span><i class="box" style="background:var(--mid)"></i>Medium</span>
+        <span><i class="box" style="background:var(--dirty)"></i>Ran on dirty power</span>
+        <span><i class="box" style="background:var(--faint);opacity:.6"></i>Scheduled</span>
+        <span><i class="box" style="outline:2px dashed var(--d2);outline-offset:-2px"></i>Freed by deferring</span>
+        <span><i class="box" style="outline:2px solid var(--d2);outline-offset:-2px"></i>Deferred job</span>
       </div>
     </section>
 
     <div class="col">
       <section class="panel">
-        <h2>누적 탄소 배출 <span id="costNote" style="font-weight:400;font-size:.85rem"></span></h2>
+        <h2>Cumulative carbon emissions <span id="costNote" style="font-weight:400;font-size:.85rem"></span></h2>
         <div class="result" id="result">
           <div class="rack" style="--c:var(--muted)">
-            <div class="name">Google<small>하루 전 계획 고정</small></div>
+            <div class="name">Google<small>fixed day-ahead plan</small></div>
             <div class="co2" id="co2B">0<small>g</small></div>
             <div class="bad" id="badB"></div>
             <div class="row"><span class="fans" id="fansB"></span><span id="jetB"></span></div>
           </div>
           <div class="rack" id="rackD1" style="--c:var(--r)" hidden>
-            <div class="name" style="color:var(--r)">Reactive<small>AI 예측 없이 반응</small></div>
+            <div class="name" style="color:var(--r)">Reactive<small>reacts, no AI forecast</small></div>
             <div class="co2" id="co2D1">0<small>g</small></div>
             <div class="bad" id="badD1"></div>
-            <div class="row"><span>화면에서만 계산</span></div>
+            <div class="row"><span>simulated on screen only</span></div>
           </div>
           <div class="rack" style="--c:var(--d2)">
-            <div class="name or">YAX<small class="or">우리 방식</small></div>
+            <div class="name or">YAX<small class="or">our method</small></div>
             <div class="co2" id="co2D2">0<small>g</small></div>
             <div class="bad" id="badD2"></div>
             <div class="row"><span class="fans" id="fansD2"></span><span id="jetD2"></span></div>
@@ -180,13 +180,13 @@ footer .src { color: var(--faint); font-size: 0.78rem; }
       </section>
 
       <section class="panel">
-        <h2>YAX는 이렇게 판단합니다 <span style="font-weight:400;font-size:.85rem">30분마다</span></h2>
+        <h2>How YAX decides <span style="font-weight:400;font-size:.85rem">every 30 minutes</span></h2>
         <div class="steps">
-          <div class="step" id="st1"><span class="no">1</span><span class="q">예측이 얼마나 틀렸나?</span><span class="a" id="a1"></span></div>
-          <div class="step" id="st2"><span class="no">2</span><span class="q">이 오차가 계속될까? <span class="or">학습한 AI 모델이 예측</span></span>
+          <div class="step" id="st1"><span class="no">1</span><span class="q">How wrong is the forecast?</span><span class="a" id="a1"></span></div>
+          <div class="step" id="st2"><span class="no">2</span><span class="q">Will this error last? <span class="or">predicted by a trained AI model</span></span>
             <span class="a" id="a2"></span>
-            <svg id="spark" viewBox="0 0 420 70" style="grid-column:2" role="img" aria-label="최근 오차와 AI가 예측한 앞으로의 오차"></svg></div>
-          <div class="step" id="st3"><span class="no">3</span><span class="q">미루는 게 이득인가? <span class="mut">줄어드는 탄소 &gt; 변경 비용일 때만</span></span><span class="a" id="a3"></span></div>
+            <svg id="spark" viewBox="0 0 420 70" style="grid-column:2" role="img" aria-label="Recent errors and the error predicted by the AI model"></svg></div>
+          <div class="step" id="st3"><span class="no">3</span><span class="q">Is deferring worth it? <span class="mut">only if carbon saved &gt; change cost</span></span><span class="a" id="a3"></span></div>
         </div>
       </section>
     </div>
@@ -204,7 +204,7 @@ const NS = "http://www.w3.org/2000/svg";
 const FAN = '<svg class="fan" viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="12" cy="12" r="2.4"/><path d="M12 2.5c2.6 0 3.6 3.3 1.6 7.1L12 9.6 10.4 9.6C8.4 5.8 9.4 2.5 12 2.5z"/><path d="M12 2.5c2.6 0 3.6 3.3 1.6 7.1L12 9.6 10.4 9.6C8.4 5.8 9.4 2.5 12 2.5z" transform="rotate(120 12 12)"/><path d="M12 2.5c2.6 0 3.6 3.3 1.6 7.1L12 9.6 10.4 9.6C8.4 5.8 9.4 2.5 12 2.5z" transform="rotate(240 12 12)"/></g></svg>';
 
 const hhmm = (t) => `${String(Math.floor(t / 2)).padStart(2, "0")}:${t % 2 ? "30" : "00"}`;
-const fmt = (v) => Math.round(v).toLocaleString("ko-KR");
+const fmt = (v) => Math.round(v).toLocaleString("en-US");
 const sgn = (v) => (Math.round(v) > 0 ? "+" : "") + Math.round(v);
 const level = (v) => (v < 150 ? "var(--clean)" : v < 250 ? "var(--mid)" : "var(--dirty)");
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -232,8 +232,8 @@ function drawMain(s) {
   const ymax = Math.ceil((Math.max(...s.forecast) + s.cloud_delta + 30) / 50) * 50;
   const y = (v) => T + (1 - Math.max(0, Math.min(ymax, v)) / ymax) * (CB - T);
   const LANES = three
-    ? [["B", 486, "Google · 하루 전 계획 그대로", "var(--fg)"], ["D1", 586, "Reactive · AI 예측 없이 지금 오차에만 반응", "var(--r)"], ["D2", 686, "YAX · AI가 오차를 예측하고 판단 (우리 기술)", "var(--d2)"]]
-    : [["B", 570, "Google · 하루 전 계획 그대로", "var(--fg)"], ["D2", 684, "YAX · AI가 오차를 예측하고 판단 (우리 기술)", "var(--d2)"]];
+    ? [["B", 486, "Google · runs the day-ahead plan as is", "var(--fg)"], ["D1", 586, "Reactive · reacts to the current error only, no AI forecast", "var(--r)"], ["D2", 686, "YAX · AI predicts the error, then decides (our technology)", "var(--d2)"]]
+    : [["B", 570, "Google · runs the day-ahead plan as is", "var(--fg)"], ["D2", 684, "YAX · AI predicts the error, then decides (our technology)", "var(--d2)"]];
   const ch = 25, gap = 3, BOT = LANES[LANES.length - 1][1] + 2 * ch + gap;
   const run = s.status === "running";
 
@@ -245,7 +245,7 @@ function drawMain(s) {
     if (!c && start != null) {
       el("rect", { x: L + start * cw, y: T, width: (t - start) * cw, height: BOT - T + 6, fill: "color-mix(in srgb, var(--dirty) 15%, transparent)" }, svg);
       const bw = (t - start) * cw;   // 띠가 좁으면 글자를 줄이거나 생략 (짧은 구름 여러 개가 겹치지 않게)
-      if (bw >= 44) el("text", { x: L + start * cw + (bw >= 170 ? 8 : bw / 2), y: T + 20, "text-anchor": bw >= 170 ? "start" : "middle", class: "ui", style: "fill:var(--dirty)" }, svg, bw >= 170 ? "구름 · 예측 못 한 오차" : "구름");
+      if (bw >= 44) el("text", { x: L + start * cw + (bw >= 170 ? 8 : bw / 2), y: T + 20, "text-anchor": bw >= 170 ? "start" : "middle", class: "ui", style: "fill:var(--dirty)" }, svg, bw >= 170 ? "Cloud · unforecast error" : "Cloud");
       start = null;
     }
   }
@@ -277,18 +277,18 @@ function drawMain(s) {
   const statusOf = (name, color) => {
     const r = s.racks[name];
     if (!run) return null;
-    if (name === "B") return cloudNow && r.running > 0 ? ["구름 속에서도 계획대로 실행 중", "var(--dirty)"]
-      : r.running > 0 ? ["계획대로 실행 중", "var(--muted)"] : ["대기", "var(--faint)"];
-    return r.moved_now ? ["작업을 나중으로 미룸", color]
-      : cloudNow && r.running < s.racks.B.running ? ["미루고 대기 중", color]
-      : r.running > pB[s.slot] ? ["미뤄 둔 작업 실행 중", color]
-      : r.running > 0 ? ["계획대로 실행 중", "var(--muted)"] : ["대기", "var(--faint)"];
+    if (name === "B") return cloudNow && r.running > 0 ? ["Running on plan, even in the cloud", "var(--dirty)"]
+      : r.running > 0 ? ["Running on plan", "var(--muted)"] : ["Idle", "var(--faint)"];
+    return r.moved_now ? ["Deferred a job to later", color]
+      : cloudNow && r.running < s.racks.B.running ? ["Deferred, waiting", color]
+      : r.running > pB[s.slot] ? ["Running deferred jobs", color]
+      : r.running > 0 ? ["Running on plan", "var(--muted)"] : ["Idle", "var(--faint)"];
   };
   for (const [name, top, title, color] of LANES) {
     const r0 = s.racks[name];
     el("text", { x: L, y: top - 10, class: "ui", style: `fill:${color}` }, svg, title);
     const st = statusOf(name, color);
-    const tail = name === "B" || s.status === "ready" ? "" : `계획 변경 ${r0.changes}회`;
+    const tail = name === "B" || s.status === "ready" ? "" : `plan changes: ${r0.changes}`;
     if (st || tail) el("text", { x: W - R, y: top - 10, "text-anchor": "end", class: "ui", style: `fill:${st ? st[1] : "var(--muted)"}` }, svg,
                        [st && st[0], tail].filter(Boolean).join(" · "));
     const plan = r0.plan;
@@ -344,7 +344,7 @@ function drawResult(s) {
     const bad = carry(s, name).cloud_run + (r.cloud_run || 0), ch = changesAll(s, name);
     const b = $("bad" + name);
     const cc = s.change_cost || 0;
-    b.innerHTML = `구름 속 실행 <b>${bad}</b>칸` + (name === "B" ? "" : `<br>계획 변경 <b style="color:var(--fg)">${ch}</b>회`
+    b.innerHTML = `Slots run in cloud: <b>${bad}</b>` + (name === "B" ? "" : `<br>Plan changes: <b style="color:var(--fg)">${ch}</b>`
       + (cc ? ` <span class="n" style="font-size:.85rem">(+${fmt(ch * cc)} g)</span>` : ""));
     b.classList.toggle("hot", bad > 0);
     if (name === "D1") continue;   // Reactive는 팬·Jetson 없음
@@ -352,14 +352,14 @@ function drawResult(s) {
     if (!fans.children.length) fans.innerHTML = FAN + FAN;
     [...fans.children].forEach((f, i) => f.classList.toggle("on", s.status === "running" && r.running > i));
     const j = s.jetson && s.jetson.racks[name];
-    $("jet" + name).innerHTML = !j ? "" : !j.online ? '<span class="offline">Jetson 연결 안 됨</span>'
+    $("jet" + name).innerHTML = !j ? "" : !j.online ? '<span class="offline">Jetson offline</span>'
       : `Jetson <b class="n" style="color:var(--fg)">${j.watts == null ? "-" : j.watts.toFixed(1)} W</b>`;
   }
   const b = total(s, "B"), d = total(s, "D2"), dd = b - d;
-  $("diff").innerHTML = s.status === "ready" ? `<span class="mut">같은 작업 ${s.jobs}개 · 같은 마감 · 같은 전기</span>`
-    : Math.abs(dd) < 1 ? '<span class="mut">아직 차이 없음</span>'
-    : dd > 0 ? `YAX가 Google보다 <b>${fmt(dd)} g</b> 덜 배출 <span class="or n">(−${(dd / b * 100).toFixed(1)}%)</span>`
-    : '<span class="mut">YAX가 미뤄 둔 작업을 실행하는 중</span>';
+  $("diff").innerHTML = s.status === "ready" ? `<span class="mut">Same ${s.jobs} jobs · same deadlines · same grid</span>`
+    : Math.abs(dd) < 1 ? '<span class="mut">No difference yet</span>'
+    : dd > 0 ? `YAX emits <b>${fmt(dd)} g</b> less than Google <span class="or n">(−${(dd / b * 100).toFixed(1)}%)</span>`
+    : '<span class="mut">YAX is running its deferred jobs</span>';
 }
 
 /* ---------- 판단 3단계 ---------- */
@@ -368,17 +368,17 @@ function drawSteps(s) {
   const sp = $("spark");
   sp.textContent = "";
   if (!tr) {
-    $("a1").innerHTML = $("a2").innerHTML = $("a3").innerHTML = '<span class="mut" style="font-weight:400;font-size:1rem">시작하면 표시됩니다</span>';
+    $("a1").innerHTML = $("a2").innerHTML = $("a3").innerHTML = '<span class="mut" style="font-weight:400;font-size:1rem">Shown after Start</span>';
     for (const id of ["st1", "st2", "st3"]) $(id).className = "step";
     return;
   }
   const t = tr.t, big = Math.abs(tr.err) >= BIG;
   // 1. 감지
-  $("a1").innerHTML = `<span class="n ${big ? (tr.err > 0 ? "red" : "") : ""}">${sgn(tr.err)}</span><small>예측 ${fmt(s.forecast[t])} → 실제 ${fmt(s.observed[t])}</small>`;
+  $("a1").innerHTML = `<span class="n ${big ? (tr.err > 0 ? "red" : "") : ""}">${sgn(tr.err)}</span><small>forecast ${fmt(s.forecast[t])} → actual ${fmt(s.observed[t])}</small>`;
   $("st1").className = "step" + (big ? " hot" : "");
   // 2. AI 예측
   const h8 = tr.future_err[Math.min(8, tr.future_err.length - 1)];
-  $("a2").innerHTML = `<small>4시간 뒤에도</small><span class="n or">${sgn(h8)}</span>`;
+  $("a2").innerHTML = `<small>in 4 hours, still</small><span class="n or">${sgn(h8)}</span>`;
   $("st2").className = "step" + (big ? " hot" : "");
   drawSpark(s, tr, sp);
   // 3. 판단
@@ -386,13 +386,13 @@ function drawSteps(s) {
   const cur = all.filter((d) => d.t === s.slot);
   const d = cur.find((v) => v.moved) || cur[0] || all[all.length - 1];
   if (!d) {
-    $("a3").innerHTML = '<span class="mut" style="font-weight:400;font-size:1rem">아직 옮길지 따져 본 작업 없음</span>';
+    $("a3").innerHTML = '<span class="mut" style="font-weight:400;font-size:1rem">No job evaluated yet</span>';
     $("st3").className = "step";
   } else {
     const fresh = d.t === s.slot && s.status === "running";
-    $("a3").innerHTML = `<span class="badge ${d.moved ? "move" : ""}">${d.moved ? "미룸" : "유지"}</span>
+    $("a3").innerHTML = `<span class="badge ${d.moved ? "move" : ""}">${d.moved ? "Defer" : "Keep"}</span>
       <span class="n" style="font-size:1.25rem">${d.gain} g ${d.moved ? "&gt;" : "≤"} ${d.lam} g</span>
-      <small>${fresh ? "" : hhmm(d.t) + " · "}줄어드는 탄소 vs 변경 비용</small>`;
+      <small>${fresh ? "" : hhmm(d.t) + " · "}carbon saved vs change cost</small>`;
     $("st3").className = "step" + (fresh && d.moved ? " fire" : d.moved && s.slot - d.t <= 3 ? " hot" : "");
   }
 }
@@ -414,46 +414,46 @@ function drawSpark(s, tr, svg) {
   const pts = fut.map((v, h) => `${x(h)},${y(v)}`);
   el("polygon", { points: `${x(0)},${y(0)} ${pts.join(" ")} ${x(fut.length - 1)},${y(0)}`, fill: "color-mix(in srgb, var(--d2) 20%, transparent)" }, svg);
   el("polyline", { points: pts.join(" "), fill: "none", stroke: "var(--d2)", "stroke-width": 3, "stroke-linejoin": "round" }, svg);
-  el("text", { x: x(-PAST + 1) - bw / 2, y: H - 1, style: "font-size:11px" }, svg, "최근 4시간 오차");
-  el("text", { x: W - 4, y: H - 1, "text-anchor": "end", style: "font-size:11px;fill:var(--d2)" }, svg, "AI 예측: 앞으로 8시간");
+  el("text", { x: x(-PAST + 1) - bw / 2, y: H - 1, style: "font-size:11px" }, svg, "Error, last 4 hours");
+  el("text", { x: W - 4, y: H - 1, "text-anchor": "end", style: "font-size:11px;fill:var(--d2)" }, svg, "AI prediction: next 8 hours");
 }
 
 function drawHead(s) {
   const meta = s.meta || {}, nd = meta.days_total || 1, di = meta.day_index || 1;
-  $("scen").textContent = meta.title || "";
+  $("scen").textContent = meta.title_en || meta.title || "";
   $("clock").textContent = s.status === "ready" ? "00:00" : hhmm(s.slot);
-  const dayTxt = nd > 1 ? `<span class="day">${di}일째 / ${nd}일</span><br>` : "";
-  $("status").innerHTML = dayTxt + { ready: "시작을 누르세요", running: "재생 중", between: "하루 끝 · 다음 날로", done: nd > 1 ? `${nd}일 끝` : "하루 끝" }[s.status];
+  const dayTxt = nd > 1 ? `<span class="day">Day ${di} / ${nd}</span><br>` : "";
+  $("status").innerHTML = dayTxt + { ready: "Press Start", running: "Running", between: "Day over · next day", done: nd > 1 ? `All ${nd} days done` : "Day over" }[s.status];
   const st = $("btnStart");
   st.disabled = s.status === "running" || s.status === "between";
-  st.textContent = s.status === "done" ? "다시 시작" : s.status === "ready" ? "시작" : "재생 중";
+  st.textContent = s.status === "done" ? "Restart" : s.status === "ready" ? "Start" : "Running";
   const c = $("btnCloud");
   c.setAttribute("aria-pressed", String(s.cloud));
   c.disabled = !!s.scripted;
-  c.textContent = s.scripted ? (s.cloud ? "구름 (자동)" : "구름 자동") : s.cloud ? "구름 걷기" : "구름 올리기";
+  c.textContent = s.scripted ? (s.cloud ? "Cloud (auto)" : "Cloud: auto") : s.cloud ? "Remove cloud" : "Add cloud";
   // 구름 스테이션 (조도센서)
   const sn = s.sensor, box = $("sensor");
   box.hidden = !sn || !!s.scripted;
   if (sn) {
     box.classList.toggle("on", sn.delta > 0);
-    box.innerHTML = sn.lux == null ? '<span class="offline">조도센서 값 없음</span>'
-      : sn.base == null ? `구름 스테이션 밝기 <b>${Math.round(sn.lux)}</b> lux<div class="bar"><i style="width:0"></i></div>`
-      : `빛 가림 <b>${sn.pct}%</b> → 탄소 <b class="d">+${sn.delta}</b><div class="bar"><i style="width:${sn.pct}%"></i></div>`;
+    box.innerHTML = sn.lux == null ? '<span class="offline">No light sensor reading</span>'
+      : sn.base == null ? `Cloud station light <b>${Math.round(sn.lux)}</b> lux<div class="bar"><i style="width:0"></i></div>`
+      : `Light blocked <b>${sn.pct}%</b> → carbon <b class="d">+${sn.delta}</b><div class="bar"><i style="width:${sn.pct}%"></i></div>`;
   }
   const find = (k) => (s.longterm || []).find((r) => r.name.startsWith(k + " "));
   const C = find("C"), D = find("D2"), R1 = find("D1"), pf = s.proof;
-  const kg = (v) => v.net_kg > 0.05 ? `Google보다 <b>${v.net_kg.toFixed(1)} kg</b> 줄임 (하루 ${v.changes.toFixed(1)}번 변경)` : "바꿀수록 손해 → <b>이득 0</b>";
-  $("costNote").textContent = (nd > 1 ? `${di}일째까지 합계 · ` : "") + (s.change_cost ? `실행 탄소 + 계획 변경 1회당 ${s.change_cost} g` : "");
+  const kg = (v) => v.net_kg > 0.05 ? `<b>${v.net_kg.toFixed(1)} kg</b> less than Google (${v.changes.toFixed(1)} changes/day)` : "more changes = more loss → <b>no gain</b>";
+  $("costNote").textContent = (nd > 1 ? `total through day ${di} · ` : "") + (s.change_cost ? `run carbon + ${s.change_cost} g per plan change` : "");
   $("proof").innerHTML = pf && pf.cost > 0 && s.racks.D1
-    ? `<b>실제 전력망 ${pf.days}일 검증</b> (계획 변경 1회 = ${pf.cost} g) · <span style="color:var(--r)">Reactive</span>: ${kg(pf.D1)} · <span class="or">YAX</span>: ${kg(pf.D2)}`
+    ? `<b>Validated on ${pf.days} days of real grid data</b> (1 plan change = ${pf.cost} g) · <span style="color:var(--r)">Reactive</span>: ${kg(pf.D1)} · <span class="or">YAX</span>: ${kg(pf.D2)}`
     : pf && pf.cost > 0
-    ? `<b>실제 전력망 ${pf.days}일 검증</b> (계획 변경 1회 = ${pf.cost} g) · <span class="or">YAX</span>: ${kg(pf.D2)} · 지금 오차에만 반응하는 방식: ${kg(pf.D1)}`
+    ? `<b>Validated on ${pf.days} days of real grid data</b> (1 plan change = ${pf.cost} g) · <span class="or">YAX</span>: ${kg(pf.D2)} · Reacting to the current error only: ${kg(pf.D1)}`
     : D && R1 && s.racks.D1
-    ? `<b>실제 전력망 685일 검증</b> · <span style="color:var(--r)">Reactive</span>: 하루 ${R1.changes.toFixed(1)}번 바꾸고 놓친 탄소 ${R1.recovery}% 회복 → <span class="or">YAX</span>: <b>${D.changes.toFixed(1)}번</b>만 바꾸고 <b>${D.recovery}%</b> 회복`
-    : C && D ? `<b>실제 전력망 685일 검증</b> · 매번 다시 계획하는 방식보다 계획 변경 <b>${Math.round((1 - D.changes / C.changes) * 100)}% 적게</b>, 놓친 탄소 회복은 <b>${D.recovery}%</b> (매번 재계획 ${C.recovery}%)`
+    ? `<b>Validated on 685 days of real grid data</b> · <span style="color:var(--r)">Reactive</span>: ${R1.changes.toFixed(1)} changes/day, recovers ${R1.recovery}% of lost carbon → <span class="or">YAX</span>: only <b>${D.changes.toFixed(1)}</b> changes/day, recovers <b>${D.recovery}%</b>`
+    : C && D ? `<b>Validated on 685 days of real grid data</b> · <b>${Math.round((1 - D.changes / C.changes) * 100)}% fewer</b> plan changes than re-planning every step, recovers <b>${D.recovery}%</b> of lost carbon (re-planning: ${C.recovery}%)`
     : "";
   const sec = s.slots * s.seconds_per_slot;
-  $("foot").textContent = `영국 전력망 ${s.day} 하루를 ${sec >= 60 ? Math.round(sec / 60) + "분" : Math.round(sec) + "초"}에 재생 · 탄소 = 실제 탄소 배출량 × 가정 전력량, 변경 비용은 가정값 · 데이터: NESO Carbon Intensity API (CC BY 4.0) · ${s.hardware}`;
+  $("foot").textContent = `UK grid, ${s.day}: one day replayed in ${sec >= 60 ? Math.round(sec / 60) + " min" : Math.round(sec) + " s"} · carbon = actual carbon intensity × assumed energy; change cost is an assumption · Data: NESO Carbon Intensity API (CC BY 4.0) · ${s.hardware_en || s.hardware}`;
 }
 
 let last = null;
@@ -463,7 +463,7 @@ async function poll() {
     const s = await res.json();
     if (s.forecast) { last = s; drawHead(s); drawMain(s); drawResult(s); drawSteps(s); }
   } catch (e) {
-    $("status").innerHTML = '<span class="offline">엔진 연결 끊김</span>';
+    $("status").innerHTML = '<span class="offline">Engine disconnected</span>';
   }
 }
 async function post(path) {

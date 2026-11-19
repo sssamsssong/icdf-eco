@@ -47,6 +47,7 @@ def load_longterm() -> list[dict]:
 
 
 LONGTERM = load_longterm()
+HARDWARE_EN = ""   # 화면(영어)에 보여 줄 하드웨어 상태. main()에서 채움
 
 
 def cost_proof(cost_g: float) -> dict | None:
@@ -209,6 +210,7 @@ def snapshot(status, day, t, forecast, observed, cloud_hist, racks, co2, hardwar
         "jobs": len(d2.jobs),
         "cloud_delta": max(config.CLOUD_DELTA, config.CLOUD_SENSOR_MAX_DELTA if config.CLOUD_SENSOR else 0),
         "hardware": hardware,
+        "hardware_en": HARDWARE_EN,
         "jetson": jet,
         "meta": meta or {},
         "carry": carry or {},
@@ -330,11 +332,11 @@ def day_list(start: str, n: int, ours: bool) -> list[tuple[str, list[float], lis
     return out
 
 
-def run_days(days, arduino, shared, cloud_plan, hardware, log_dir, jetsons, sensor, seed, sc_title, scripted):
+def run_days(days, arduino, shared, cloud_plan, hardware, log_dir, jetsons, sensor, seed, sc_title, scripted, sc_title_en=""):
     """여러 날을 이어서 재생합니다. 누적은 지난날 합계(carry) + 오늘."""
     carry: dict = {}
     for i, (day, f, a) in enumerate(days):
-        meta = {"title": sc_title, "day_index": i + 1, "days_total": len(days), "scripted": scripted}
+        meta = {"title": sc_title, "title_en": sc_title_en, "day_index": i + 1, "days_total": len(days), "scripted": scripted}
         res = run_day(day, f, a, arduino, shared, cloud_plan, hardware, log_dir, jetsons, sensor,
                       seed=None if seed is None else seed + i, meta=meta, carry=dict(carry), calibrate=(i == 0))
         for name, r in res.items():
@@ -385,12 +387,14 @@ def main():
         a, b = map(int, args.cloud.split("-"))
         cloud_plan = {t: float(config.CLOUD_DELTA) for t in range(a, b + 1)}
     sc_title = sc["title"] if sc else ""
+    sc_title_en = sc.get("title_en", "") if sc else ""
     scripted = cloud_plan is not None
 
     days = day_list(day0, n_days, args.ours)
     forecast = days[0][1]
     arduino = Arduino(args.port, args.dry_run)
     hardware = "아두이노 연결 안 함" if arduino.dry_run else f"아두이노 {args.port}"
+    hardware_en = "Arduino not connected" if arduino.dry_run else f"Arduino {args.port}"
     hosts = dict(config.JETSON_HOSTS)
     if args.jetson_b:
         hosts["B"] = args.jetson_b
@@ -399,6 +403,10 @@ def main():
     jetsons = Jetsons(hosts)
     if jetsons.enabled:
         hardware += " · Jetson " + ", ".join(f"{k} {'연결됨' if l.online else '연결 안 됨'}" for k, l in jetsons.links.items())
+        names = {"B": "Google", "D2": "YAX"}
+        hardware_en += " · Jetson " + ", ".join(f"{names.get(k, k)} {'online' if l.online else 'offline'}" for k, l in jetsons.links.items())
+    global HARDWARE_EN
+    HARDWARE_EN = hardware_en
     shared = Shared()
     sensor = CloudSensor(arduino, shared)
     log_dir = Path(__file__).resolve().parent.parent / "logs"
@@ -407,13 +415,13 @@ def main():
     try:
         if not args.gui:
             print("c = 구름, q = 종료")
-            run_days(days, arduino, shared, cloud_plan, hardware, log_dir, jetsons, sensor, seed, sc_title, scripted)
+            run_days(days, arduino, shared, cloud_plan, hardware, log_dir, jetsons, sensor, seed, sc_title, scripted, sc_title_en)
             return
 
         start_server(shared, args.http_port)
         url = f"http://127.0.0.1:{args.http_port}/"
         empty = make_racks(forecast, seed)
-        meta0 = {"title": sc_title, "day_index": 1, "days_total": len(days), "scripted": scripted}
+        meta0 = {"title": sc_title, "title_en": sc_title_en, "day_index": 1, "days_total": len(days), "scripted": scripted}
         shared.set_state(snapshot("ready", days[0][0], -1, forecast, [], [], empty,
                                   {r.name: 0.0 for r in empty}, hardware, jetsons, meta=meta0))
         print(f"화면: {url}  (화면의 [시작] 또는 s = 시작, c = 구름, q = 종료)")
@@ -425,7 +433,7 @@ def main():
                 handle_keys(shared)
                 sensor.publish()
                 time.sleep(0.05)
-            run_days(days, arduino, shared, cloud_plan, hardware, log_dir, jetsons, sensor, seed, sc_title, scripted)
+            run_days(days, arduino, shared, cloud_plan, hardware, log_dir, jetsons, sensor, seed, sc_title, scripted, sc_title_en)
     except (KeyboardInterrupt, Quit):
         print("종료")
     finally:
