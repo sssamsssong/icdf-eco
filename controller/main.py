@@ -373,6 +373,8 @@ def main():
     sc = scenarios.get(args.scenario) if args.scenario else None
     if sc:
         args.ours = True
+        if args.slot_seconds is None and not args.fast and "slot_seconds" in sc:
+            config.SECONDS_PER_SLOT = sc["slot_seconds"]   # --slot-seconds를 주면 그 값이 우선
     day0 = args.day or (sc["day"] if sc else None)
     if not day0:
         ap.error("--day 또는 --scenario 가 필요합니다")

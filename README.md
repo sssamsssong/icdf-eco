@@ -41,7 +41,7 @@ pip install -r requirements.txt
 ```bash
 icdf 1               # 발표 시나리오 1 · 긴 구름 (구름 자동)
 icdf 2               # 발표 시나리오 2 · 짧은 구름 여러 번 (구름 자동)
-icdf 3               # 발표 시나리오 3 · 5일 연속, 심사위원이 구름판으로 직접
+icdf 3               # 발표 시나리오 3 · 5일 연속(약 4분), 심사위원이 구름판으로 직접
 icdf                 # = ./demo.sh  아두이노·Jetson을 찾아서 붙이고 화면을 엶
 icdf --dry-run       # 아두이노 없이
 icdf --no-jetson     # Jetson 없이
