@@ -36,6 +36,19 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+## 한 번에 켜기 (메인 PC, 우분투)
+
+```bash
+icdf                 # = ./demo.sh  아두이노·Jetson을 찾아서 붙이고 화면을 엶
+icdf --dry-run       # 아두이노 없이
+icdf --no-jetson     # Jetson 없이
+icdf --rehearsal     # 리허설 (하루 약 24초)
+icdf --classic       # 예전 화면
+icdf 2025-06-15      # 날짜 바꾸기
+```
+`icdf` 단축어는 `~/.bash_aliases`에 `alias icdf='~/icdf-eco/demo.sh'`로 등록되어 있습니다 (새 터미널부터 적용).
+시연 중 조작은 브라우저 화면에서 합니다 (Enter 시작, 스페이스 구름). 우분투 터미널에서는 `s`/`c`/`q` 키가 동작하지 않으니 끌 때는 Ctrl+C.
+
 ## 실행 순서
 
 1. **아두이노**: Arduino IDE에서 `firmware/fan_led/fan_led.ino`를 엽니다. 라이브러리 관리자에서 `Adafruit NeoPixel`을 설치하고 업로드합니다.

@@ -5,81 +5,146 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>탄소 인지 스케줄러 시연</title>
 <style>
-/* 부스 모니터용. 목업(GUI_목업)과 같은 색. 인터넷 없이도 뜨도록 글꼴은 PC에 있는 것만 씀 */
+/* 부스 모니터용 (1920x1080, F11). 인터넷 없이 뜨도록 글꼴은 PC에 있는 것만 씀. 예전 화면은 /classic */
 :root {
-  --bg: #0e1412;
-  --panel: #151d1a;
-  --panel-2: #1b2521;
-  --line: #273430;
-  --fg: #e6ece9;
-  --muted: #8fa099;
+  --bg: #0b110f;
+  --panel: #131b18;
+  --panel-2: #1a2420;
+  --line: #26332e;
+  --fg: #e8eeeb;
+  --muted: #8b9c95;
+  --faint: #5d6e67;
   --clean: #3fbf8a;
   --mid: #e2b33a;
   --dirty: #e0655a;
   --d2: #f0a24b;
+  --d2-soft: color-mix(in srgb, var(--d2) 18%, transparent);
   --b: #a9bcb5;
-  --ui: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
-  --num: Consolas, "D2Coding", ui-monospace, monospace;
+  --ui: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans CJK KR", system-ui, sans-serif;
+  --num: Consolas, "D2Coding", "DejaVu Sans Mono", ui-monospace, monospace;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--ui); font-size: 15px; line-height: 1.45; }
-.wrap { max-width: 1600px; margin: 0 auto; padding: 18px 20px 28px; display: grid; gap: 14px; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--ui); font-size: 15px; line-height: 1.4; }
+.wrap { max-width: 1880px; margin: 0 auto; padding: 12px 18px 12px; display: grid; gap: 10px; }
 button { font: inherit; color: inherit; }
 button:focus-visible { outline: 2px solid var(--d2); outline-offset: 2px; }
+b, .n { font-variant-numeric: tabular-nums; }
+.n { font-family: var(--num); }
+.or { color: var(--d2); }
+.mut { color: var(--muted); }
 
-header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
-header h1 { margin: 0; font-size: 1.35rem; font-weight: 700; }
-header .sub { color: var(--muted); font-size: 0.9rem; }
+/* ---------- 머리 ---------- */
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 28px; }
+header h1 { margin: 0; font-size: 1.45rem; font-weight: 700; letter-spacing: -0.01em; }
+header .tagline { font-size: 1rem; color: var(--muted); margin-top: 2px; }
+header .tagline b { color: var(--fg); font-weight: 700; }
+header .tagline em { font-style: normal; color: var(--d2); font-weight: 700; }
 .clock { margin-left: auto; display: flex; align-items: baseline; gap: 12px; }
-.clock .t { font-family: var(--num); font-size: 2.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-.clock .s { color: var(--muted); font-size: 0.9rem; min-width: 12em; }
+.clock .t { font-family: var(--num); font-size: 2.4rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.clock .s { color: var(--muted); font-size: 0.9rem; min-width: 11em; }
 .btns { display: flex; gap: 8px; }
-.btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px; padding: 9px 18px; font-weight: 700; cursor: pointer; }
+.btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 20px; font-weight: 700; cursor: pointer; }
 .btn:hover:not(:disabled) { border-color: var(--muted); }
 .btn:disabled { opacity: 0.45; cursor: default; }
 .btn.start { border-color: color-mix(in srgb, var(--clean) 60%, transparent); }
 .btn.cloud[aria-pressed="true"] { background: var(--dirty); border-color: var(--dirty); color: var(--bg); }
 
-.grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); gap: 14px; align-items: start; }
-.col { display: grid; gap: 14px; min-width: 0; }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
-.panel h2 { margin: 0; font-size: 0.85rem; font-weight: 600; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
-.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.8rem; color: var(--muted); }
+/* ---------- 단계 흐름 ---------- */
+.flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.step { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px 10px; display: grid; gap: 3px; transition: border-color .25s, box-shadow .25s, background .25s; min-width: 0; }
+.step + .step::before { content: ""; position: absolute; left: -10px; top: 50%; width: 10px; height: 2px; background: var(--line); }
+.step .hd { display: flex; align-items: baseline; gap: 8px; }
+.step .no { font-family: var(--num); font-weight: 700; color: var(--faint); font-size: 0.95rem; }
+.step .nm { font-weight: 700; font-size: 0.98rem; }
+.step .when { margin-left: auto; font-size: 0.72rem; color: var(--faint); border: 1px solid var(--line); border-radius: 99px; padding: 0 7px; white-space: nowrap; }
+.step .tech { font-size: 0.78rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.step .live { font-size: 0.9rem; min-height: 1.3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.step .live b { font-family: var(--num); }
+.step.done .no { color: var(--muted); }
+.step.on { border-color: color-mix(in srgb, var(--fg) 35%, transparent); }
+.step.on .no { color: var(--fg); }
+.step.hot { border-color: var(--d2); background: color-mix(in srgb, var(--d2) 7%, var(--panel)); }
+.step.hot .no { color: var(--d2); }
+.step.fire { border-color: var(--d2); box-shadow: 0 0 0 3px color-mix(in srgb, var(--d2) 35%, transparent); background: color-mix(in srgb, var(--d2) 14%, var(--panel)); }
+.step.ours::after { content: "우리 기술"; position: absolute; top: -9px; right: 10px; font-size: 0.68rem; font-weight: 700; color: var(--bg); background: var(--d2); border-radius: 99px; padding: 1px 8px; }
+
+/* ---------- 본문 ---------- */
+.grid { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(380px, 1fr); gap: 12px; align-items: start; }
+.col { display: grid; gap: 12px; min-width: 0; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 12px; display: grid; gap: 6px; min-width: 0; }
+.panel h2 { margin: 0; font-size: 0.92rem; font-weight: 700; display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; }
+.panel h2 .tag { font-family: var(--num); color: var(--d2); margin-right: 6px; }
+.panel h2 .aside { font-weight: 400; font-size: 0.82rem; color: var(--muted); }
+.panel h2 .aside b { color: var(--fg); font-family: var(--num); }
+.legend { display: flex; flex-wrap: wrap; gap: 3px 16px; font-size: 0.78rem; color: var(--muted); }
 .legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 6px; }
-.legend i.box { height: 10px; border: 0; }
+.legend i.box { height: 10px; border: 0; border-radius: 2px; }
 svg { display: block; width: 100%; height: auto; }
 svg text { fill: var(--muted); font-family: var(--num); font-size: 11px; }
+svg .lbl { font-family: var(--ui); font-size: 12px; font-weight: 700; }
 
-.rack { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 14px; border-radius: 8px; background: var(--panel-2); border-left: 4px solid var(--c); }
+/* ⑤ 판단 카드 */
+.decide { display: grid; gap: 6px; }
+.decide .top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.decide .job { font-weight: 700; font-size: 1.05rem; }
+.decide .verdict { margin-left: auto; font-weight: 800; font-size: 1.25rem; padding: 2px 14px; border-radius: 8px; border: 2px solid var(--faint); color: var(--muted); }
+.decide .verdict.move { border-color: var(--d2); color: var(--bg); background: var(--d2); }
+.decide .compare { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; font-size: 0.86rem; }
+.decide .slot { background: var(--panel-2); border-radius: 8px; padding: 6px 10px; display: grid; gap: 1px; }
+.decide .slot .k { color: var(--muted); font-size: 0.76rem; }
+.decide .slot .v { font-family: var(--num); font-size: 1.05rem; }
+.decide .arrow { color: var(--d2); font-size: 1.3rem; font-weight: 700; }
+.decide .formula { font-family: var(--num); font-size: 0.84rem; color: var(--muted); }
+.decide .formula b { color: var(--fg); }
+.decide .idle { color: var(--muted); font-size: 0.9rem; line-height: 1.55; }
+.decide .idle b { color: var(--fg); }
+
+.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 96px; overflow: hidden; }
+.log li { display: grid; grid-template-columns: 3.4em 1fr auto; gap: 8px; align-items: baseline; font-size: 0.84rem; padding: 4px 8px; background: var(--panel-2); border-radius: 6px; }
+.log li.move { box-shadow: inset 3px 0 0 var(--d2); }
+.log .w { font-family: var(--num); color: var(--muted); }
+.log .r { font-family: var(--num); font-size: 0.8rem; }
+.log li.move .r { color: var(--d2); font-weight: 700; }
+.counts { font-size: 0.8rem; color: var(--muted); }
+.counts b { color: var(--fg); font-family: var(--num); }
+
+/* ---------- 아래 줄 ---------- */
+.bottom { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr); gap: 12px; }
+.rack { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 10px; padding: 10px 14px; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-content: start; }
 .rack .name { font-weight: 700; font-size: 1.05rem; }
-.rack .tag { color: var(--muted); font-size: 0.82rem; grid-column: 1 / -1; margin-top: -4px; }
-.rack .co2 { font-family: var(--num); font-size: 1.9rem; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; grid-row: 1 / 3; grid-column: 2; align-self: center; }
+.rack .desc { color: var(--muted); font-size: 0.82rem; grid-column: 1; }
+.rack .co2 { font-family: var(--num); font-size: 2.1rem; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; grid-row: 1 / 3; grid-column: 2; align-self: center; }
 .rack .co2 small { font-size: 0.8rem; color: var(--muted); font-weight: 400; margin-left: 3px; }
-.rack .row { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 0.85rem; }
+.rack .row { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
 .rack .row b { color: var(--fg); font-family: var(--num); }
-.fans { display: flex; gap: 6px; }
-.fan { width: 26px; height: 26px; color: var(--line); }
-.fan.on { color: var(--c); animation: spin 0.6s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .fan.on { animation: none; } }
-.rack .jet { grid-column: 1 / -1; color: var(--muted); font-size: 0.82rem; }
+.rack .jet { grid-column: 1 / -1; color: var(--muted); font-size: 0.8rem; }
 .rack .jet b { color: var(--fg); font-family: var(--num); font-weight: 600; }
 .rack .jet[hidden] { display: none; }
-.diff { font-size: 0.95rem; padding: 2px 2px 0; }
-.diff b { font-family: var(--num); color: var(--d2); }
+.rack .diff { grid-column: 1 / -1; font-size: 0.9rem; margin-top: 2px; min-height: 1.3em; }
+.rack .diff b { font-family: var(--num); color: var(--d2); }
+.fans { display: flex; gap: 6px; }
+.fan { width: 24px; height: 24px; color: var(--line); }
+.fan.on { color: var(--c); animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .fan.on { animation: none; } .step { transition: none; } }
 
-.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 300px; overflow-y: auto; }
-.log li { display: grid; grid-template-columns: auto 1fr; gap: 10px; font-size: 0.88rem; padding: 6px 8px; background: var(--panel-2); border-radius: 6px; }
-.log .when { font-family: var(--num); color: var(--d2); }
-.log .what small { color: var(--muted); }
-.empty { color: var(--muted); font-size: 0.88rem; }
+.proof table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.proof th, .proof td { padding: 3px 6px; text-align: left; white-space: nowrap; }
+.proof th { color: var(--muted); font-weight: 400; font-size: 0.76rem; border-bottom: 1px solid var(--line); }
+.proof td.n { text-align: right; }
+.proof tr.ours td { color: var(--d2); font-weight: 700; }
+.proof .bar { height: 8px; border-radius: 2px; background: var(--faint); display: inline-block; vertical-align: middle; }
+.proof tr.ours .bar { background: var(--d2); }
+.proof .note { font-size: 0.76rem; color: var(--muted); }
 
-footer { color: var(--muted); font-size: 0.78rem; display: flex; flex-wrap: wrap; gap: 4px 18px; }
+footer { color: var(--faint); font-size: 0.74rem; display: flex; flex-wrap: wrap; gap: 2px 18px; }
 .offline { color: var(--dirty); font-weight: 700; }
 
-@media (max-width: 900px) {
-  .grid { grid-template-columns: 1fr; }
+@media (max-width: 1100px) {
+  .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .step + .step::before { display: none; }
+  .grid, .bottom { grid-template-columns: minmax(0, 1fr); }
   .clock { margin-left: 0; }
 }
 </style>
@@ -89,11 +154,11 @@ footer { color: var(--muted); font-size: 0.78rem; display: flex; flex-wrap: wrap
   <header>
     <div>
       <h1>탄소 인지 AI 데이터센터 스케줄러</h1>
-      <div class="sub" id="sub">엔진에 연결하는 중…</div>
+      <div class="tagline"><b>하루 전 계획은 지키고</b>, 학습한 모델이 <em>예측 오차가 이어진다</em>고 볼 때만, <em>이득이 비용보다 클 때만</em> 고칩니다.</div>
     </div>
     <div class="clock">
       <span class="t" id="clock">--:--</span>
-      <span class="s" id="status"></span>
+      <span class="s" id="status">엔진에 연결하는 중…</span>
     </div>
     <div class="btns">
       <button class="btn start" id="btnStart" type="button">시작</button>
@@ -101,21 +166,37 @@ footer { color: var(--muted); font-size: 0.78rem; display: flex; flex-wrap: wrap
     </div>
   </header>
 
+  <!-- ①~⑤ 단계 -->
+  <section class="flow" aria-label="스케줄러 단계">
+    <div class="step" id="st1"><div class="hd"><span class="no">①</span><span class="nm">하루 전 예측</span><span class="when">전날</span></div>
+      <div class="tech" id="tech1"></div><div class="live" id="live1"></div></div>
+    <div class="step" id="st2"><div class="hd"><span class="no">②</span><span class="nm">하루 전 계획</span><span class="when">전날</span></div>
+      <div class="tech">예측상 깨끗한 시간대에 유연한 작업 배치</div><div class="live" id="live2"></div></div>
+    <div class="step" id="st3"><div class="hd"><span class="no">③</span><span class="nm">실행 · 관측</span><span class="when">당일 30분마다</span></div>
+      <div class="tech">실제 탄소 신호 (구름 = 예측 못 한 오차)</div><div class="live" id="live3"></div></div>
+    <div class="step ours" id="st4"><div class="hd"><span class="no">④</span><span class="nm">오차 지속 예측</span><span class="when">당일 30분마다</span></div>
+      <div class="tech" id="tech4"></div><div class="live" id="live4"></div></div>
+    <div class="step ours" id="st5"><div class="hd"><span class="no">⑤</span><span class="nm">이득 − 비용 판단</span><span class="when">당일 30분마다</span></div>
+      <div class="tech" id="tech5"></div><div class="live" id="live5"></div></div>
+  </section>
+
   <div class="grid">
     <div class="col">
       <section class="panel">
-        <h2>탄소 집약도 (gCO₂/kWh) <span id="nowVal"></span></h2>
-        <svg id="chart" viewBox="0 0 960 300" role="img" aria-label="하루 전 예측과 실제 탄소 집약도"></svg>
+        <h2><span>탄소 집약도 <span class="mut" style="font-weight:400">gCO₂/kWh</span></span><span class="aside" id="nowVal"></span></h2>
+        <svg id="chart" viewBox="0 0 960 250" role="img" aria-label="하루 전 예측, 실제 값, D2가 갱신한 예측"></svg>
         <div class="legend">
-          <span><i style="border-top-style:dashed;border-color:var(--muted)"></i>하루 전 예측</span>
-          <span><i style="border-color:var(--fg)"></i>실제 (구름 포함)</span>
-          <span><i class="box" style="background:color-mix(in srgb,var(--dirty) 25%,transparent)"></i>구름이 있던 시간</span>
+          <span><i class="box" style="background:color-mix(in srgb,var(--muted) 16%,transparent)"></i>① 하루 전 예측 ± 평균 오차</span>
+          <span><i style="border-top-style:dashed;border-color:var(--muted)"></i>① 하루 전 예측 (B는 이것만 믿음)</span>
+          <span><i style="border-color:var(--fg)"></i>③ 실제 (구름 포함)</span>
+          <span><i style="border-color:var(--d2);border-top-width:3px"></i>④ D2가 다시 본 남은 하루</span>
+          <span><i class="box" style="background:color-mix(in srgb,var(--dirty) 25%,transparent)"></i>구름</span>
         </div>
       </section>
 
       <section class="panel">
-        <h2>작업 일정 <span>칸 하나 = 30분, 위아래 두 줄 = 팬 두 개</span></h2>
-        <svg id="sched" viewBox="0 0 960 150" role="img" aria-label="두 랙의 작업 일정"></svg>
+        <h2><span>작업 일정</span><span class="aside">칸 하나 = 30분 · 위아래 두 줄 = 팬 두 개 · 두 랙은 같은 작업, 같은 마감</span></h2>
+        <svg id="sched" viewBox="0 0 960 128" role="img" aria-label="두 랙의 작업 일정"></svg>
         <div class="legend">
           <span><i class="box" style="background:var(--b)"></i>실행함</span>
           <span><i class="box" style="background:color-mix(in srgb,var(--b) 30%,transparent)"></i>실행 예정</span>
@@ -127,34 +208,51 @@ footer { color: var(--muted); font-size: 0.78rem; display: flex; flex-wrap: wrap
 
     <div class="col">
       <section class="panel">
-        <h2>누적 탄소 배출</h2>
-        <div class="rack" style="--c:var(--b)">
-          <div class="name">B 랙</div>
-          <div class="co2" id="co2B">0<small>g</small></div>
-          <div class="tag">하루 전 계획을 그대로 실행 (구글 방식)</div>
-          <div class="row"><span class="fans" id="fansB"></span><span>계획 변경 <b id="chB">0</b>회</span></div>
-          <div class="jet" id="jetB" hidden></div>
+        <h2><span><span class="tag">④</span>이 오차는 얼마나 이어질까?</span><span class="aside" id="errNow"></span></h2>
+        <svg id="errChart" viewBox="0 0 520 200" role="img" aria-label="최근 오차와 학습 모델이 예측한 앞으로의 오차"></svg>
+        <div class="legend">
+          <span><i class="box" style="background:var(--muted)"></i>최근 4시간 실제 오차 (모델 입력)</span>
+          <span><i style="border-color:var(--d2);border-top-width:3px"></i>학습 모델 예측 <b class="n" id="maeL" style="color:var(--fg)"></b></span>
+          <span><i style="border-top-style:dotted;border-color:var(--muted)"></i>지금 오차 그대로 <span class="n" id="maeH"></span></span>
+          <span><i style="border-top-style:dashed;border-color:var(--faint)"></i>오차 0 (B의 관점) <span class="n" id="maeZ"></span></span>
         </div>
-        <div class="rack" style="--c:var(--d2)">
-          <div class="name">D2 랙</div>
-          <div class="co2" id="co2D2">0<small>g</small></div>
-          <div class="tag">오차가 이어질 때만 계획 수정 (우리 방식)</div>
-          <div class="row"><span class="fans" id="fansD2"></span><span>계획 변경 <b id="chD2">0</b>회</span></div>
-          <div class="jet" id="jetD2" hidden></div>
-        </div>
-        <div class="diff" id="diff"></div>
       </section>
 
       <section class="panel">
-        <h2>D2가 바꾼 계획</h2>
+        <h2><span><span class="tag">⑤</span>옮길까, 말까?</span><span class="counts" id="counts"></span></h2>
+        <div class="decide" id="decide"></div>
+        <svg id="gainBar" viewBox="0 0 520 44" role="img" aria-label="예상 이득과 변경 비용 비교"></svg>
         <ul class="log" id="log"></ul>
       </section>
     </div>
   </div>
 
+  <div class="bottom">
+    <div class="rack" style="--c:var(--b)">
+      <div class="name">B 랙 <span class="mut" style="font-weight:400;font-size:.85rem">구글 방식</span></div>
+      <div class="co2" id="co2B">0<small>g</small></div>
+      <div class="desc">하루 전 계획을 그대로 실행 (①②만)</div>
+      <div class="row"><span class="fans" id="fansB"></span><span>계획 변경 <b id="chB">0</b>회</span></div>
+      <div class="jet" id="jetB" hidden></div>
+    </div>
+    <div class="rack" style="--c:var(--d2)">
+      <div class="name">D2 랙 <span class="or" style="font-weight:400;font-size:.85rem">우리 방식</span></div>
+      <div class="co2" id="co2D2">0<small>g</small></div>
+      <div class="desc">①② + 당일 ④ 오차 지속 예측 · ⑤ 이득 − 비용 판단</div>
+      <div class="row"><span class="fans" id="fansD2"></span><span>계획 변경 <b id="chD2">0</b>회</span></div>
+      <div class="jet" id="jetD2" hidden></div>
+      <div class="diff" id="diff"></div>
+    </div>
+    <section class="panel proof">
+      <h2><span>실제 데이터로 검증</span><span class="aside" id="proofSub">영국 전력망 2025-01 ~ 2026-11, 685일</span></h2>
+      <table id="proof"></table>
+      <div class="note" id="proofNote"></div>
+    </section>
+  </div>
+
   <footer>
     <span id="foot"></span>
-    <span>데이터: 영국 Carbon Intensity API (NESO, CC BY 4.0)</span>
+    <span>데이터: 영국 Carbon Intensity API (NESO, CC BY 4.0) · 2026 Energy ICDF · 연세대학교 YAX</span>
   </footer>
 </div>
 
@@ -165,95 +263,289 @@ const FAN = '<svg class="fan" viewBox="0 0 24 24" aria-hidden="true"><g fill="cu
 
 const hhmm = (t) => `${String(Math.floor(t / 2)).padStart(2, "0")}:${t % 2 ? "30" : "00"}`;
 const fmt = (v) => Math.round(v).toLocaleString("ko-KR");
+const sgn = (v) => (Math.round(v) > 0 ? "+" : "") + Math.round(v);
 const level = (v) => (v < 150 ? "var(--clean)" : v < 250 ? "var(--mid)" : "var(--dirty)");
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-function el(tag, attrs, parent) {
+function el(tag, attrs, parent, text) {
   const e = document.createElementNS(NS, tag);
   for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
   if (parent) parent.appendChild(e);
   return e;
 }
 
-// ---------- 탄소 그래프 ----------
+/* D2가 검토한 작업 중 화면에 보여 줄 만한 것 (이득을 계산한 것) */
+const weighed = (s) => s.decisions.filter((d) => d.reason === "gain" || d.reason === "small_gain");
+
+/* ---------- 단계 흐름 ---------- */
+function drawFlow(s) {
+  const f = s.facts, tr = s.trace, run = s.status !== "ready";
+  $("tech1").textContent = `${f.dayahead_model} · 학습 ${f.dayahead_train}`;
+  $("live1").innerHTML = `평균 오차 <b>${f.dayahead_mae}</b> <span class="mut">(단순 예측 ${f.dayahead_baseline_mae}보다 ${Math.round((1 - f.dayahead_mae / f.dayahead_baseline_mae) * 100)}% 정확)</span>`;
+  const jobs = s.racks.B.plan.reduce((a, b) => a + b, 0);
+  $("live2").innerHTML = `작업 <b>${s.jobs}</b>개 · <b>${jobs}</b>칸 배치 <span class="mut">(긴급 작업은 고정)</span>`;
+  $("tech4").textContent = `학습 모델 · 최근 ${f.error_lags / 2}시간 오차 → 최대 23.5시간 뒤`;
+  $("tech5").textContent = `미뤄서 줄일 탄소 > 변경 비용 λ ${s.lam} g 일 때만 · 하루 ${s.max_changes}회 한도`;
+
+  const t = s.slot;
+  if (!run || t < 0) {
+    $("live3").innerHTML = '<span class="mut">시작하면 30분마다 실제 값을 받습니다</span>';
+    $("live4").innerHTML = '<span class="mut">예측과 실제의 차이를 보고 앞으로를 다시 봅니다</span>';
+    $("live5").innerHTML = '<span class="mut">작업마다 옮길 가치가 있는지 계산합니다</span>';
+  } else {
+    const obs = s.observed[t], fc = s.forecast[t];
+    $("live3").innerHTML = `실제 <b>${fmt(obs)}</b> · 예측 <b>${fmt(fc)}</b>` + (s.cloud_hist[t] ? ' <span style="color:var(--dirty);font-weight:700">구름 +' + s.cloud_delta + '</span>' : "");
+    if (tr) {
+      const h8 = tr.future_err[Math.min(8, tr.future_err.length - 1)];
+      $("live4").innerHTML = `지금 오차 <b>${sgn(tr.err)}</b> → 4시간 뒤 <b class="or">${sgn(h8)}</b> 예상`;
+    }
+    const now = s.decisions.filter((d) => d.t === t);
+    const w = now.filter((d) => d.reason === "gain" || d.reason === "small_gain");
+    if (w.length) {
+      const d = w.find((x) => x.moved) || w[0];
+      $("live5").innerHTML = `${esc(d.job)} 이득 <b>${d.gain}</b> g ${d.moved ? "&gt;" : "≤"} λ ${d.lam} → <b class="${d.moved ? "or" : ""}">${d.moved ? "옮김" : "유지"}</b>`;
+    } else if (now.length) {
+      const d = now[0];
+      $("live5").innerHTML = d.reason === "urgent" ? `${esc(d.job)}: 긴급 작업이라 그대로`
+        : d.reason === "budget" ? "오늘 변경 한도를 다 씀 → 그대로"
+        : `${esc(d.job)}: 뒤에 더 깨끗한 시간 없음 → 그대로`;
+    } else {
+      $("live5").innerHTML = '<span class="mut">이 시간에 돌릴 유연한 작업 없음</span>';
+    }
+  }
+  const tr0 = tr && run;
+  const big = tr0 && Math.abs(tr.err) >= 40;
+  const nowW = run ? weighed(s).filter((d) => d.t === t) : [];
+  const fire = nowW.some((d) => d.moved);
+  $("st1").className = "step" + (run ? " done" : " on");
+  $("st2").className = "step" + (run ? " done" : " on");
+  $("st3").className = "step" + (run && s.status === "running" ? " on" : run ? " done" : "");
+  $("st4").className = "step ours" + (big ? " hot" : tr0 && s.status === "running" ? " on" : "");
+  $("st5").className = "step ours" + (fire ? " fire" : nowW.length ? " hot" : tr0 && s.status === "running" ? " on" : "");
+}
+
+/* ---------- 탄소 그래프 ---------- */
 function drawChart(s) {
   const svg = $("chart");
   svg.textContent = "";
-  const W = 960, H = 300, L = 44, R = 12, T = 12, B = 26;
-  const n = s.slots;
-  const all = s.forecast.concat(s.observed);
+  const W = 960, H = 250, L = 44, R = 14, T = 14, B = 24;
+  const n = s.slots, mae = s.facts.dayahead_mae;
+  const tr = s.status !== "ready" ? s.trace : null;
+  const all = s.forecast.map((v) => v + mae).concat(s.observed, tr ? tr.belief : []);
   const ymax = Math.max(100, Math.ceil((Math.max(...all) + 20) / 50) * 50);
-  const x = (t) => L + (t + 0.5) * (W - L - R) / n;
-  const y = (v) => T + (1 - v / ymax) * (H - T - B);
   const cw = (W - L - R) / n;
+  const x = (t) => L + (t + 0.5) * cw;
+  const y = (v) => T + (1 - Math.max(0, v) / ymax) * (H - T - B);
 
   for (let v = 0; v <= ymax; v += ymax > 300 ? 100 : 50) {
     el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "var(--line)" }, svg);
-    el("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end" }, svg).textContent = v;
+    el("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end" }, svg, v);
   }
-  for (let t = 0; t <= n; t += 12) {
-    el("text", { x: L + t * cw, y: H - 6, "text-anchor": t === n ? "end" : "middle" }, svg).textContent = t === n ? "24:00" : hhmm(t);
+  for (let t = 0; t <= n; t += 6) {
+    el("text", { x: L + t * cw, y: H - 6, "text-anchor": t === n ? "end" : t === 0 ? "start" : "middle" }, svg, t === n ? "24:00" : hhmm(t));
   }
   s.cloud_hist.forEach((c, t) => {
-    if (c) el("rect", { x: L + t * cw, y: T, width: cw + 0.5, height: H - T - B,
-                        fill: "color-mix(in srgb, var(--dirty) 22%, transparent)" }, svg);
+    if (c) el("rect", { x: L + t * cw, y: T, width: cw + 0.5, height: H - T - B, fill: "color-mix(in srgb, var(--dirty) 20%, transparent)" }, svg);
   });
-  el("polyline", { points: s.forecast.map((v, t) => `${x(t)},${y(v)}`).join(" "), fill: "none",
-                   stroke: "var(--muted)", "stroke-width": 2, "stroke-dasharray": "6 5" }, svg);
+  // ① 예측 ± 평균 오차
+  const up = s.forecast.map((v, t) => `${x(t)},${y(v + mae)}`);
+  const dn = s.forecast.map((v, t) => `${x(t)},${y(v - mae)}`).reverse();
+  el("polygon", { points: up.concat(dn).join(" "), fill: "color-mix(in srgb, var(--muted) 13%, transparent)" }, svg);
+  el("polyline", { points: s.forecast.map((v, t) => `${x(t)},${y(v)}`).join(" "), fill: "none", stroke: "var(--muted)", "stroke-width": 2, "stroke-dasharray": "6 5" }, svg);
+
+  // ③ 실제
   if (s.observed.length) {
     const pts = s.observed.map((v, t) => `${x(t)},${y(v)}`);
-    el("polygon", { points: `${x(0)},${y(0)} ${pts.join(" ")} ${x(s.observed.length - 1)},${y(0)}`,
-                    fill: "color-mix(in srgb, var(--fg) 6%, transparent)" }, svg);
-    el("polyline", { points: pts.join(" "), fill: "none", stroke: "var(--fg)", "stroke-width": 2.5,
-                     "stroke-linejoin": "round" }, svg);
-    const t = s.observed.length - 1, v = s.observed[t];
-    if (s.status === "running") {
-      el("line", { x1: x(t), x2: x(t), y1: T, y2: H - B, stroke: "var(--fg)", "stroke-opacity": 0.35 }, svg);
+    el("polyline", { points: pts.join(" "), fill: "none", stroke: "var(--fg)", "stroke-width": 2.5, "stroke-linejoin": "round" }, svg);
+  }
+  // ④ D2가 다시 본 남은 하루 (지금 이후)
+  if (tr && s.status === "running") {
+    const t0 = tr.t;
+    const bp = tr.belief.map((v, h) => `${x(t0 + h)},${y(v)}`);
+    const fp = tr.belief.map((_, h) => `${x(t0 + h)},${y(s.forecast[t0 + h])}`).reverse();
+    el("polygon", { points: bp.concat(fp).join(" "), fill: "var(--d2-soft)" }, svg);
+    el("polyline", { points: bp.join(" "), fill: "none", stroke: "var(--d2)", "stroke-width": 3, "stroke-linejoin": "round" }, svg);
+    const hl = Math.min(tr.belief.length - 1, Math.max(4, Math.round(tr.belief.length * 0.55)));
+    if (tr.belief.length > 6 && Math.abs(tr.err) >= 25) {
+      el("text", { x: x(t0 + hl), y: y(tr.belief[hl]) - 10, "text-anchor": "middle", class: "lbl", style: "fill:var(--d2);paint-order:stroke;stroke:var(--panel);stroke-width:5px;stroke-linejoin:round" }, svg, "D2가 다시 본 남은 하루");
     }
+  }
+  // ⑤ 최근 판단: 지금 → 옮길 후보 시간 화살표 (최근 3칸 동안 보여 줌)
+  if (s.status === "running") {
+    const recent = weighed(s).filter((d) => s.slot - d.t <= 2 && d.to != null);
+    const defs = el("defs", {}, svg);
+    for (const [id, c] of [["ah", "var(--d2)"], ["ahg", "var(--muted)"]]) {
+      const m = el("marker", { id, viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, defs);
+      el("path", { d: "M0,0 L10,5 L0,10 z", fill: c }, m);
+    }
+    const seen = new Set();
+    for (const d of recent.reverse()) {
+      if (seen.has(d.job)) continue;
+      seen.add(d.job);
+      const x1 = x(d.t), y1 = y(d.now), x2 = x(d.to), y2 = y(d.then);
+      const lift = Math.min(70, 24 + Math.abs(x2 - x1) * 0.12);
+      const c = d.moved ? "var(--d2)" : "var(--muted)";
+      el("path", { d: `M${x1},${y1} C${x1 + (x2 - x1) * 0.3},${Math.min(y1, y2) - lift} ${x1 + (x2 - x1) * 0.7},${Math.min(y1, y2) - lift} ${x2},${y2}`,
+                   fill: "none", stroke: c, "stroke-width": d.moved ? 2.5 : 1.5, "stroke-dasharray": d.moved ? "" : "5 4", "marker-end": `url(#${d.moved ? "ah" : "ahg"})` }, svg);
+      el("circle", { cx: x2, cy: y2, r: 5, fill: "none", stroke: c, "stroke-width": 2 }, svg);
+      const mx = (x1 + x2) / 2, my = Math.min(y1, y2) - lift * 0.75 - 6;
+      const tx = el("text", { x: mx, y: my, "text-anchor": "middle", class: "lbl", style: `fill:${c};paint-order:stroke;stroke:var(--panel);stroke-width:5px;stroke-linejoin:round` }, svg,
+         `${d.job} ${d.moved ? "옮김" : "유지"} · 이득 ${d.gain} g ${d.moved ? ">" : "≤"} λ ${d.lam}`);
+    }
+  }
+  // 지금 표시
+  if (s.observed.length) {
+    const t = s.observed.length - 1, v = s.observed[t];
+    if (s.status === "running") el("line", { x1: x(t), x2: x(t), y1: T, y2: H - B, stroke: "var(--fg)", "stroke-opacity": 0.3 }, svg);
     el("circle", { cx: x(t), cy: y(v), r: 6, fill: level(v), stroke: "var(--bg)", "stroke-width": 2 }, svg);
   }
 }
 
-// ---------- 작업 일정 ----------
+/* ---------- ④ 오차 지속 그래프 ---------- */
+function drawErr(s) {
+  const svg = $("errChart");
+  svg.textContent = "";
+  const f = s.facts;
+  $("maeL").textContent = `평균 오차 ${f.error_mae}`;
+  $("maeH").textContent = `${f.error_hold_mae}`;
+  $("maeZ").textContent = `${f.error_zero_mae}`;
+  const W = 520, H = 200, L = 40, R = 14, T = 12, B = 34;
+  const PAST = f.error_lags, AHEAD = 32;               // 과거 4시간, 앞으로 16시간
+  const span = PAST + AHEAD;
+  const x = (h) => L + (h + PAST - 0.5) / span * (W - L - R);   // h: 0 = 지금, 음수 = 과거
+  const tr = s.status !== "ready" ? s.trace : null;
+  const past = [];
+  if (tr) for (let k = PAST - 1; k >= 0; k--) {
+    const t = tr.t - k;
+    past.push(t >= 0 ? s.observed[t] - s.forecast[t] : null);
+  }
+  const fut = tr ? tr.future_err.slice(0, AHEAD + 1) : [];
+  const vals = past.filter((v) => v != null).concat(fut, [40, -40]);
+  const m = Math.ceil(Math.max(...vals.map(Math.abs)) / 40) * 40;
+  const y = (v) => T + (1 - (v + m) / (2 * m)) * (H - T - B);
+
+  for (let v = -m; v <= m; v += m / 2) {
+    el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: v === 0 ? "var(--faint)" : "var(--line)", "stroke-dasharray": v === 0 ? "5 4" : "" }, svg);
+    el("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end" }, svg, (v > 0 ? "+" : "") + v);
+  }
+  el("rect", { x: x(-PAST + 0.5) - 0, y: T, width: x(0.5) - x(-PAST + 0.5), height: H - T - B, fill: "color-mix(in srgb, var(--fg) 4%, transparent)" }, svg);
+  el("line", { x1: x(0.5), x2: x(0.5), y1: T, y2: H - B, stroke: "var(--fg)", "stroke-opacity": 0.35 }, svg);
+  for (const [h, lab, a] of [[-PAST + 0.5, "4시간 전", "start"], [0, "지금", "middle"], [8, "+4시간", "middle"], [16, "+8시간", "middle"], [24, "+12시간", "middle"], [AHEAD + 0.5, "+16시간", "end"]]) {
+    el("text", { x: x(h), y: H - 18, "text-anchor": a }, svg, lab);
+  }
+  el("text", { x: x(-PAST / 2 + 0.5), y: H - 4, "text-anchor": "middle", class: "lbl" }, svg, "모델이 보는 것");
+  el("text", { x: x(AHEAD / 2), y: H - 4, "text-anchor": "middle", class: "lbl", style: "fill:var(--d2)" }, svg, "모델이 예측하는 것");
+
+  if (!tr) {
+    el("text", { x: (L + W) / 2, y: H / 2 - 14, "text-anchor": "middle", class: "lbl" }, svg, "예측과 실제의 차이(오차)가 앞으로 얼마나 이어질지");
+    el("text", { x: (L + W) / 2, y: H / 2 + 6, "text-anchor": "middle", class: "lbl" }, svg, "2024년 1년치 오차로 학습한 모델이 30분마다 다시 예측합니다");
+    return;
+  }
+  // 과거 오차 막대 (입력)
+  const bw = (W - L - R) / span * 0.7;
+  past.forEach((v, i) => {
+    if (v == null) return;
+    const h = i - PAST + 1;
+    el("rect", { x: x(h) - bw / 2, y: Math.min(y(v), y(0)), width: bw, height: Math.abs(y(v) - y(0)), rx: 1.5,
+                 fill: h === 0 ? "var(--fg)" : "var(--muted)", "fill-opacity": h === 0 ? 0.9 : 0.55 }, svg);
+  });
+  // 지금 오차 그대로 (점선)
+  el("line", { x1: x(0), x2: x(AHEAD), y1: y(tr.err), y2: y(tr.err), stroke: "var(--muted)", "stroke-width": 1.5, "stroke-dasharray": "2 4" }, svg);
+  // 학습 모델 예측
+  const pts = fut.map((v, h) => `${x(h)},${y(v)}`);
+  el("polygon", { points: `${x(0)},${y(0)} ${pts.join(" ")} ${x(fut.length - 1)},${y(0)}`, fill: "var(--d2-soft)" }, svg);
+  el("polyline", { points: pts.join(" "), fill: "none", stroke: "var(--d2)", "stroke-width": 3, "stroke-linejoin": "round" }, svg);
+  for (const h of [8, 16]) if (h < fut.length) {
+    el("circle", { cx: x(h), cy: y(fut[h]), r: 4, fill: "var(--d2)" }, svg);
+    el("text", { x: x(h), y: y(fut[h]) + (fut[h] >= 0 ? -9 : 17), "text-anchor": "middle", style: "fill:var(--d2);font-weight:700" }, svg, sgn(fut[h]));
+  }
+  $("errNow").innerHTML = `지금 오차 <b>${sgn(tr.err)}</b> g/kWh`;
+}
+
+/* ---------- ⑤ 판단 ---------- */
+function drawDecide(s) {
+  const box = $("decide"), bar = $("gainBar");
+  bar.textContent = "";
+  const all = weighed(s);
+  const moved = all.filter((d) => d.moved).length;
+  $("counts").innerHTML = s.status === "ready" ? "" : `이득 계산 <b>${all.length}</b>번 → 옮김 <b class="or">${moved}</b> · 유지 <b>${all.length - moved}</b>`;
+  // 지금 칸의 판단, 없으면 가장 최근 판단
+  const cur = all.filter((d) => d.t === s.slot);
+  const d = (cur.find((x) => x.moved) || cur[0]) || all[all.length - 1];
+  if (!d || s.status === "ready") {
+    box.innerHTML = `<div class="idle">작업마다 <b>"지금 돌리기"</b>와 <b>"④가 예상한 가장 깨끗한 나중 시간"</b>을 비교합니다.<br>
+      줄어드는 탄소(이득)가 <b>변경 비용 λ = ${s.lam} g</b>보다 클 때만 옮깁니다. 오차가 하루 내내 똑같이 이어질 거라 보면, 미뤄도 이득이 없어서 그대로 둡니다.</div>`;
+    return;
+  }
+  const ago = s.slot - d.t;
+  box.innerHTML = `
+    <div class="top"><span class="n mut">${hhmm(d.t)}</span><span class="job">${esc(d.job)}</span>
+      <span class="mut" style="font-size:.82rem">${ago > 0 ? `${ago * 30}분 전 판단` : "지금 판단"}</span>
+      <span class="verdict ${d.moved ? "move" : ""}">${d.moved ? "옮김" : "유지"}</span></div>
+    <div class="compare">
+      <div class="slot"><span class="k">지금 ${hhmm(d.t)}에 돌리면</span><span class="v">${fmt(d.now)} <span class="mut" style="font-size:.75rem">g/kWh</span></span></div>
+      <span class="arrow">→</span>
+      <div class="slot"><span class="k">${hhmm(d.to)}로 미루면 (④ 예상)</span><span class="v or">${fmt(d.then)} <span class="mut" style="font-size:.75rem">g/kWh</span></span></div>
+    </div>
+    <div class="formula">이득 = (${fmt(d.now)} − ${fmt(d.then)}) × ${s.kwh} kWh = <b class="${d.moved ? "or" : ""}">${d.gain} g</b> ${d.moved ? "&gt;" : "≤"} 비용 λ ${d.lam} g</div>`;
+  // 이득 막대
+  const W = 520, L = 4, R = 8, top = 6, h = 18;
+  const max = Math.max(d.lam * 2.2, d.gain * 1.15, 1);
+  const sx = (v) => L + Math.max(0, v) / max * (W - L - R);
+  el("rect", { x: L, y: top, width: W - L - R, height: h, rx: 4, fill: "var(--panel-2)" }, bar);
+  el("rect", { x: L, y: top, width: Math.max(2, sx(d.gain) - L), height: h, rx: 4, fill: d.moved ? "var(--d2)" : "var(--faint)" }, bar);
+  el("line", { x1: sx(d.lam), x2: sx(d.lam), y1: top - 6, y2: top + h + 6, stroke: "var(--fg)", "stroke-width": 2 }, bar);
+  el("text", { x: sx(d.lam), y: top + h + 18, "text-anchor": "middle", class: "lbl" }, bar, `변경 비용 λ ${d.lam} g`);
+  el("text", { x: L + 6, y: top + 13, class: "lbl", style: `fill:${d.moved ? "var(--bg)" : "var(--fg)"}` }, bar, `이득 ${d.gain} g`);
+
+  // 기록 (최근 것 먼저)
+  const ul = $("log");
+  ul.textContent = "";
+  for (const e of all.slice(-3).reverse()) {
+    const li = document.createElement("li");
+    if (e.moved) li.className = "move";
+    li.innerHTML = `<span class="w">${hhmm(e.t)}</span><span>${esc(e.job)} ${e.moved ? `→ ${hhmm(e.to)}로 미룸` : "그대로"}</span>
+      <span class="r">${e.gain} ${e.moved ? "&gt;" : "≤"} ${e.lam} g</span>`;
+    ul.appendChild(li);
+  }
+}
+
+/* ---------- 작업 일정 ---------- */
 function drawSched(s) {
   const svg = $("sched");
   svg.textContent = "";
-  const W = 960, L = 44, R = 12, n = s.slots;
-  const cw = (W - L - R) / n, ch = 18, gap = 2;
-  const rows = [["B", "var(--b)", 14], ["D2", "var(--d2)", 74]];
-  const pB = s.racks.B.plan, pD = s.racks.D2.plan;
-
+  const W = 960, L = 44, R = 14, n = s.slots;
+  const cw = (W - L - R) / n, ch = 17, gap = 2;
+  const rows = [["B", "var(--b)", 8], ["D2", "var(--d2)", 60]];
+  const pB = s.racks.B.plan;
   for (const [name, color, top] of rows) {
-    el("text", { x: L - 8, y: top + ch + 4, "text-anchor": "end", style: "font-weight:700;font-size:15px;fill:var(--fg)" }, svg).textContent = name;
+    el("text", { x: L - 8, y: top + ch + 4, "text-anchor": "end", style: "font-weight:700;font-size:15px;fill:var(--fg)" }, svg, name);
     const plan = s.racks[name].plan;
     for (let t = 0; t < n; t++) {
       for (let k = 0; k < 2; k++) {
         const filled = plan[t] > k;
         const done = t <= s.slot && s.status !== "ready";
         const r = el("rect", { x: L + t * cw + 1, y: top + k * (ch + gap), width: cw - 2, height: ch, rx: 2 }, svg);
-        if (filled) {
-          r.setAttribute("fill", color);
-          r.setAttribute("fill-opacity", done ? 1 : 0.3);
-        } else {
-          r.setAttribute("fill", "var(--panel-2)");
-        }
+        if (filled) { r.setAttribute("fill", color); r.setAttribute("fill-opacity", done ? 1 : 0.3); }
+        else r.setAttribute("fill", "var(--panel-2)");
         if (name === "D2") {
-          // B와 같은 출발 계획에서 달라진 칸 표시
           if (filled && k >= pB[t]) { r.setAttribute("stroke", "var(--d2)"); r.setAttribute("stroke-width", 2); }
           if (!filled && k < pB[t]) { r.setAttribute("stroke", "var(--d2)"); r.setAttribute("stroke-dasharray", "3 2"); }
         }
       }
     }
   }
-  for (let t = 0; t <= n; t += 12) {
-    el("text", { x: L + t * cw, y: 146, "text-anchor": t === n ? "end" : "middle" }, svg).textContent = t === n ? "24:00" : hhmm(t);
+  for (let t = 0; t <= n; t += 6) {
+    el("text", { x: L + t * cw, y: 124, "text-anchor": t === n ? "end" : t === 0 ? "start" : "middle" }, svg, t === n ? "24:00" : hhmm(t));
   }
   if (s.status === "running") {
     const xx = L + (s.slot + 0.5) * cw;
-    el("line", { x1: xx, x2: xx, y1: 8, y2: 130, stroke: "var(--fg)", "stroke-opacity": 0.5 }, svg);
+    el("line", { x1: xx, x2: xx, y1: 2, y2: 110, stroke: "var(--fg)", "stroke-opacity": 0.5 }, svg);
   }
 }
 
-// ---------- 오른쪽 패널 ----------
+/* ---------- 아래 줄 ---------- */
 function drawRacks(s) {
   for (const name of ["B", "D2"]) {
     const r = s.racks[name];
@@ -262,68 +554,64 @@ function drawRacks(s) {
     const fans = $("fans" + name);
     if (!fans.children.length) fans.innerHTML = FAN + FAN;
     [...fans.children].forEach((f, i) => f.classList.toggle("on", s.status === "running" && r.running > i));
-  }
-  for (const name of ["B", "D2"]) {
     const box = $("jet" + name);
     const j = s.jetson && s.jetson.racks[name];
     box.hidden = !j;
-    if (!j) continue;
-    if (!j.online) { box.innerHTML = '<span class="offline">Jetson 연결 안 됨</span> · 가정 전력값만 사용'; continue; }
-    const w = j.watts == null ? "-" : j.watts.toFixed(1);
-    const scale = s.jetson.scale === 1 ? "" : ` ×${s.jetson.scale}`;
-    const co2 = s.jetson.show_co2 ? ` · 실측 탄소 <b>${j.co2.toFixed(1)} g</b>${scale}` : "";
-    box.innerHTML = `Jetson 실측 <b>${w} W</b> (대기 ${j.idle_w ?? "-"} W)${co2}`;
+    if (j) {
+      if (!j.online) box.innerHTML = '<span class="offline">Jetson 연결 안 됨</span> · 가정 전력값만 사용';
+      else {
+        const w = j.watts == null ? "-" : j.watts.toFixed(1);
+        const co2 = s.jetson.show_co2 ? ` · 실측 탄소 <b>${j.co2.toFixed(1)} g</b>` : "";
+        box.innerHTML = `Jetson 실제 작업 중 · 실측 <b>${w} W</b> (대기 ${j.idle_w ?? "-"} W)${co2}`;
+      }
+    }
   }
   const b = s.racks.B.co2, d = s.racks.D2.co2, dd = b - d;
   const diff = $("diff");
-  if (s.status === "ready") diff.textContent = "같은 작업, 같은 마감, 같은 탄소 신호로 두 랙을 동시에 돌립니다.";
-  else if (Math.abs(dd) < 1) diff.textContent = "아직 두 랙의 배출량이 같습니다.";
-  else if (dd > 0) diff.innerHTML = `D2가 B보다 <b>${fmt(dd)} g</b> 덜 배출 (${(dd / b * 100).toFixed(1)}%)`;
-  else diff.innerHTML = `지금은 D2가 B보다 <b>${fmt(-dd)} g</b> 더 배출 (미뤄 둔 작업을 돌리는 중)`;
+  if (s.status === "ready") diff.textContent = "같은 작업, 같은 마감, 같은 탄소 신호";
+  else if (Math.abs(dd) < 1) diff.innerHTML = '<span class="mut">아직 두 랙의 배출량이 같습니다</span>';
+  else if (dd > 0) diff.innerHTML = `B보다 <b>${fmt(dd)} g</b> 덜 배출 (${(dd / b * 100).toFixed(1)}%)`;
+  else diff.innerHTML = `<span class="mut">미뤄 둔 작업을 돌리는 중 (지금은 B보다 ${fmt(-dd)} g 많음)</span>`;
 }
 
-function drawLog(s) {
-  const ul = $("log");
-  ul.textContent = "";
-  if (!s.events.length) {
-    const li = document.createElement("li");
-    li.className = "empty";
-    li.style.background = "none";
-    li.textContent = "아직 없음. 잠깐 지나가는 구름에는 계획을 바꾸지 않습니다.";
-    ul.appendChild(li);
-    return;
+function drawProof(s) {
+  const rows = s.longterm || [];
+  const tb = $("proof");
+  if (!rows.length) { tb.innerHTML = '<tr><td class="mut">sim/results 결과 파일이 없습니다</td></tr>'; return; }
+  const pick = [["B", "B 하루 전 고정 (구글)"], ["C", "C 매 시점 재계획"], ["D1", "D1 지금 오차에만 반응"], ["D2", "D2 우리 방식"]];
+  const find = (k) => rows.find((r) => r.name.startsWith(k + " "));
+  const maxCh = Math.max(...pick.map(([k]) => (find(k) || {}).changes || 0), 0.1);
+  const maxRec = Math.max(...pick.map(([k]) => (find(k) || {}).recovery || 0), 1);
+  let html = "<tr><th>전략</th><th>하루 평균 계획 변경</th><th>놓친 탄소 회복률</th></tr>";
+  for (const [k, label] of pick) {
+    const r = find(k);
+    if (!r) continue;
+    const cw = Math.round(r.changes / maxCh * 70), rw = Math.round(Math.max(0, r.recovery) / maxRec * 70);
+    html += `<tr class="${k === "D2" ? "ours" : ""}"><td>${label}</td>
+      <td class="n">${r.changes.toFixed(1)}회 <span class="bar" style="width:${cw}px"></span></td>
+      <td class="n">${r.recovery.toFixed(1)}% <span class="bar" style="width:${rw}px"></span></td></tr>`;
   }
-  for (const e of [...s.events].reverse()) {
-    const li = document.createElement("li");
-    const when = document.createElement("span");
-    when.className = "when";
-    when.textContent = hhmm(e.t);
-    const what = document.createElement("span");
-    what.className = "what";
-    what.append(`${e.job} → ${hhmm(e.to)}로 미룸 `);
-    const sm = document.createElement("small");
-    sm.textContent = `예상 이득 ${e.gain} g`;
-    what.appendChild(sm);
-    li.append(when, what);
-    ul.appendChild(li);
-  }
+  tb.innerHTML = html;
+  const c = find("C"), d2 = find("D2");
+  $("proofNote").innerHTML = c && d2
+    ? `D2는 매 시점 재계획(C)의 <b style="color:var(--fg)">${Math.round(d2.changes / c.changes * 100)}%</b>만 바꾸고 회복률은 ${d2.recovery >= c.recovery ? "더 높습니다" : "비슷합니다"}. 회복률 = 예측이 틀려 놓친 탄소 중 되찾은 비율. 부스의 구름은 인위적인 계단 모양이라 성능 비교는 이 결과로 합니다.`
+    : "";
 }
 
 function drawHead(s) {
   const sec = s.slots * s.seconds_per_slot;
   const dur = sec >= 60 ? `약 ${Math.round(sec / 60)}분` : `약 ${Math.round(sec)}초`;
-  $("sub").textContent = `영국 전력망 ${s.day} 하루를 ${dur}으로 재생`;
   $("clock").textContent = s.status === "ready" ? "00:00" : hhmm(s.slot);
-  $("status").textContent = { ready: "시작을 누르세요", running: "재생 중", done: "하루 끝" }[s.status];
+  $("status").innerHTML = `${{ ready: "시작을 누르세요", running: "재생 중", done: "하루 끝" }[s.status]}<br><span style="font-size:.78rem">영국 ${s.day} 하루를 ${dur}에</span>`;
   const st = $("btnStart");
   st.disabled = s.status === "running";
   st.textContent = s.status === "done" ? "다시 시작" : s.status === "running" ? "재생 중" : "시작";
   const c = $("btnCloud");
   c.setAttribute("aria-pressed", String(s.cloud));
   c.textContent = s.cloud ? "구름 걷기" : "구름 올리기";
-  const v = s.observed.length ? s.observed[s.observed.length - 1] : null;
-  $("nowVal").textContent = v == null ? "" : `지금 ${fmt(v)}`;
-  $("foot").textContent = `탄소는 실제 탄소 집약도 × 가정 전력량(작업 1개, 30분에 ${s.kwh} kWh)으로 계산한 추정치 · 람다 ${s.lam} g · ${s.hardware}`;
+  const t = s.observed.length - 1;
+  $("nowVal").innerHTML = t < 0 ? "" : `지금 실제 <b>${fmt(s.observed[t])}</b> · 하루 전 예측 <b>${fmt(s.forecast[t])}</b>`;
+  $("foot").textContent = `탄소 = 실제 탄소 집약도 × 가정 전력량 (작업 1개, 30분에 ${s.kwh} kWh) · 구름 = 탄소 신호 +${s.cloud_delta} · ${s.hardware}`;
 }
 
 let last = null;
@@ -333,7 +621,7 @@ async function poll() {
     const s = await res.json();
     if (s.forecast) {
       last = s;
-      drawHead(s); drawChart(s); drawSched(s); drawRacks(s); drawLog(s);
+      drawHead(s); drawFlow(s); drawChart(s); drawErr(s); drawDecide(s); drawSched(s); drawRacks(s); drawProof(s);
     }
   } catch (e) {
     $("status").innerHTML = '<span class="offline">엔진 연결 끊김</span>';
@@ -344,7 +632,6 @@ async function post(path) {
   try { await fetch(path, { method: "POST" }); } catch (e) {}
   poll();
 }
-// 클릭 후 포커스를 빼서 스페이스/엔터가 버튼을 한 번 더 누르지 않게 함
 $("btnStart").onclick = (e) => { e.currentTarget.blur(); post("/start"); };
 $("btnCloud").onclick = (e) => { e.currentTarget.blur(); post("/cloud"); };
 document.addEventListener("keydown", (e) => {

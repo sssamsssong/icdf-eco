@@ -106,6 +106,8 @@ class CorrectingScheduler(FixedScheduler):
         self.errors: list[float] = []
         self.log: list[str] = []
         self.events: list[dict] = []   # GUI용 변경 기록
+        self.decisions: list[dict] = []  # GUI용: 검토한 모든 작업 (옮김/유지와 이유)
+        self.trace: dict | None = None   # GUI용: 가장 최근 슬롯의 오차, 오차 예측, 갱신 예측
         self.model = None
         if self.error_model == "learned":
             if CorrectingScheduler._model_cache is None:
@@ -135,13 +137,20 @@ class CorrectingScheduler(FixedScheduler):
         self.err_ema = a * err + (1 - a) * self.err_ema
         self.errors.append(err)
 
-        upd = None  # 갱신 예측 곡선. 필요할 때 슬롯마다 한 번만 계산
+        # 갱신 예측 곡선 (남은 시간). 판단에 쓰는 값과 같고, 화면에도 그대로 보여 줌
+        future = [self.future_error(h) for h in range(len(self.forecast) - t)]
+        upd = [self.forecast[t + h] + e for h, e in enumerate(future)]
+        self.trace = {"t": t, "err": round(err, 1), "future_err": [round(e, 1) for e in future],
+                      "belief": [round(v, 1) for v in upd]}
+
         for jid in list(self.plan[t]):
             job = self.jobs[jid]
-            if job.urgent or self.changes >= self.max_changes:
+            if job.urgent:
+                self.decisions.append({"t": t, "job": jid, "moved": False, "reason": "urgent"})
                 continue
-            if upd is None:
-                upd = [self.updated_forecast(t, h) for h in range(len(self.forecast) - t)]
+            if self.changes >= self.max_changes:
+                self.decisions.append({"t": t, "job": jid, "moved": False, "reason": "budget"})
+                continue
             now_val = upd[0]
             best_t, best_val = None, now_val
             for t2 in range(t + 1, job.deadline):
@@ -151,13 +160,20 @@ class CorrectingScheduler(FixedScheduler):
                 if v < best_val:
                     best_t, best_val = t2, v
             if best_t is None:
+                self.decisions.append({"t": t, "job": jid, "moved": False, "reason": "no_better",
+                                       "now": round(now_val, 1), "lam": self.lam})
                 continue
             gain_g = (now_val - best_val) * config.KWH_PER_SLOT
+            d = {"t": t, "job": jid, "to": best_t, "gain": round(gain_g, 1), "lam": self.lam,
+                 "now": round(now_val, 1), "then": round(best_val, 1)}
             if gain_g > self.lam:
                 self.plan[t].remove(jid)
                 self.plan[best_t].append(jid)
                 self.changes += 1
                 self.log.append(f"t={t}: {jid} → t={best_t} (이득 {gain_g:.1f} g)")
                 self.events.append({"t": t, "job": jid, "to": best_t, "gain": round(gain_g, 1)})
+                self.decisions.append({**d, "moved": True, "reason": "gain"})
+            else:
+                self.decisions.append({**d, "moved": False, "reason": "small_gain"})
 
         return super().step(t, observed)

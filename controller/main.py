@@ -33,6 +33,20 @@ class Quit(Exception):
     pass
 
 
+def load_longterm() -> list[dict]:
+    """장기 시뮬레이션 요약 (sim/run_longterm.py 결과). 없으면 빈 목록."""
+    path = Path(__file__).resolve().parent.parent / "sim" / "results" / "summary_test_default.csv"
+    try:
+        with open(path, encoding="utf-8-sig") as f:
+            return [{"name": r["전략"], "kg": float(r["탄소 kg"]), "changes": float(r["하루 평균 변경"]),
+                     "recovery": float(r["회복률 %"])} for r in csv.DictReader(f)]
+    except (OSError, KeyError, ValueError):
+        return []
+
+
+LONGTERM = load_longterm()
+
+
 def read_key() -> str | None:
     if msvcrt and msvcrt.kbhit():
         return msvcrt.getwch().lower()
@@ -80,8 +94,16 @@ def snapshot(status, day, t, forecast, observed, cloud_hist, racks, co2, hardwar
             } for r in racks
         },
         "events": d2.events,
+        "decisions": d2.decisions,
+        "trace": d2.trace,
         "lam": d2.lam,
+        "max_changes": d2.max_changes,
+        "error_model": d2.error_model,
+        "facts": config.MODEL_FACTS,
+        "longterm": LONGTERM,
         "kwh": config.KWH_PER_SLOT,
+        "jobs": len(d2.jobs),
+        "cloud_delta": config.CLOUD_DELTA,
         "hardware": hardware,
         "jetson": jet,
     }

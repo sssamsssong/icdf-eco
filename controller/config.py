@@ -19,6 +19,21 @@ ERROR_DECAY = 0.85          # 오차가 한 슬롯 뒤에 남는 비율 (단기 
 MAX_CHANGES_PER_DAY = 20    # 변경 예산
 ERROR_MODEL = "learned"        # "rule" = EMA x DECAY^h 규칙 / "learned" = controller/error_model.json (sim/train_error_persistence.py)
 
+# 시연 화면 '근거' 패널에 보여 주는 학습 결과 (sim/README.md 2026-11-17 실행 결과, gCO2/kWh MAE).
+# 모델을 다시 학습하면 이 숫자도 고치세요. 장기 시뮬레이션 수치는 sim/results/summary_test_default.csv에서 바로 읽습니다.
+MODEL_FACTS = {
+    "dayahead_model": "Ridge 회귀",
+    "dayahead_train": "2017-09 ~ 2023 영국 전력망 (30분 단위)",
+    "dayahead_mae": 37.2,          # 테스트 2025~
+    "dayahead_baseline_mae": 47.3,  # 가장 좋은 단순 기준선 (이틀 전 같은 시각)
+    "error_model": "선형 회귀 47개 (30분 ~ 23.5시간 뒤)",
+    "error_train": "2024년 하루 전 예측 오차",
+    "error_lags": 8,                # 최근 8칸 = 4시간
+    "error_mae": 28.4,              # 평균 h 1~47
+    "error_hold_mae": 33.7,         # '지금 오차 유지' (D1의 관점)
+    "error_zero_mae": 37.2,         # '오차는 바로 사라진다' (B의 관점)
+}
+
 # LED 표시 범위 (gCO2/kWh → 0~100)
 LED_MIN_G = 50
 LED_MAX_G = 350

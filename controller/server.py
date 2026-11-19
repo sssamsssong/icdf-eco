@@ -51,6 +51,8 @@ def start_server(shared: Shared, port: int = 8000) -> ThreadingHTTPServer:
         def do_GET(self):
             if self.path in ("/", "/index.html"):
                 self._send(GUI_HTML.read_bytes(), "text/html; charset=utf-8")
+            elif self.path in ("/classic", "/classic.html"):  # 예전 화면 (비상용)
+                self._send(GUI_HTML.with_name("classic.html").read_bytes(), "text/html; charset=utf-8")
             elif self.path.startswith("/state"):
                 self._send(shared.get_json(), "application/json; charset=utf-8")
             else:
