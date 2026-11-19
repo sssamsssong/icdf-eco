@@ -271,7 +271,8 @@ function drawRacks(s) {
     if (!j.online) { box.innerHTML = '<span class="offline">Jetson 연결 안 됨</span> · 가정 전력값만 사용'; continue; }
     const w = j.watts == null ? "-" : j.watts.toFixed(1);
     const scale = s.jetson.scale === 1 ? "" : ` ×${s.jetson.scale}`;
-    box.innerHTML = `Jetson 실측 <b>${w} W</b> (대기 ${j.idle_w ?? "-"} W) · 실측 탄소 <b>${j.co2.toFixed(1)} g</b>${scale}`;
+    const co2 = s.jetson.show_co2 ? ` · 실측 탄소 <b>${j.co2.toFixed(1)} g</b>${scale}` : "";
+    box.innerHTML = `Jetson 실측 <b>${w} W</b> (대기 ${j.idle_w ?? "-"} W)${co2}`;
   }
   const b = s.racks.B.co2, d = s.racks.D2.co2, dd = b - d;
   const diff = $("diff");

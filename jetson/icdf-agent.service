@@ -14,6 +14,10 @@ Wants=network-online.target
 [Service]
 User=jetson
 WorkingDirectory=/home/jetson/icdf-eco/jetson
+# 부팅 직후에는 다른 서비스 때문에 전력이 높아서, 바로 켜면 대기 전력이 높게 잡힙니다 (실측 6.5 W vs 평소 4~4.5 W).
+# 1분 기다렸다가 켜서 대기 전력을 제대로 잽니다. 재시작(Restart=always) 때도 1분 기다립니다.
+ExecStartPre=/bin/sleep 60
+TimeoutStartSec=90
 ExecStart=/usr/bin/python3 -u agent.py --port 8100 --workers 2
 Restart=always
 RestartSec=3

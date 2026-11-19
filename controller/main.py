@@ -61,7 +61,7 @@ def snapshot(status, day, t, forecast, observed, cloud_hist, racks, co2, hardwar
         jet = jetsons.summary()
         for rack, info in jet.items():
             info["co2"] = round((measured or {}).get(rack, 0.0), 2)
-        jet = {"racks": jet, "scale": config.JETSON_POWER_SCALE}
+        jet = {"racks": jet, "scale": config.JETSON_POWER_SCALE, "show_co2": config.GUI_SHOW_MEASURED_CO2}
     return {
         "status": status,
         "day": day,

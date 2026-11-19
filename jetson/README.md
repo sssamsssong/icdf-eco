@@ -13,7 +13,10 @@ Jetson이 없거나 응답하지 않아도 시연은 그대로 돌아갑니다 (
 
 ## 1. 네트워크 (스위치 하나에 메인 PC + Jetson 2대)
 
-전시장 와이파이에 기대지 않도록 유선 고정 IP를 씁니다. 메인 PC 와이파이(192.168.1.x)와 겹치지 않는 대역으로.
+전시장 와이파이에 기대지 않도록 유선 고정 IP를 씁니다. 메인 PC 와이파이와 겹치지 않는 대역으로.
+
+**실제로 설정한 내용(연결 이름, 사용자 이름, 명령)은 [docs/Jetson_연결후_할일.md](../docs/Jetson_연결후_할일.md) 1~2번에 있습니다.** 아래는 처음부터 새로 만들 때의 일반적인 방법입니다.
+기존 유선 연결에 다른 고정 주소(예: 라이다용)가 있으면 새로 만들지 말고 `sudo nmcli con mod <이름> +ipv4.addresses 10.0.0.11/24`로 **추가**하세요.
 
 | 장치 | IP |
 |---|---|
@@ -50,7 +53,10 @@ python3 agent.py                    # "준비 완료 … 작업 종류 torch-cud
 - **전력 항목**: Orin Nano는 `VDD_IN 4936mW/4936mW` 형태입니다. 다르게 나오면 `agent.py`의 `POWER_RE`를 고치세요.
   `tegrastats`가 sudo 없이 안 되면 서비스에서 `User=root`로 돌리세요.
 - **방화벽**: `sudo ufw status`가 active면 `sudo ufw allow 8100/tcp`
-- **자동 실행**: `icdf-agent.service` 안의 설명대로 설치. 기본 사용자/경로는 `jetson`, `/home/jetson/icdf-eco`
+- **자동 실행**: `icdf-agent.service` 안의 설명대로 설치. 기본 사용자/경로는 `jetson`, `/home/jetson/icdf-eco`.
+  사용자 이름이 다르면 설치할 때 바꿔 넣으세요 (D2 랙 `yax-module1`의 예는 체크리스트 5번).
+  부팅 직후 대기 전력이 높게 잡히지 않도록 60초 기다렸다가 시작합니다.
+- **인터넷이 없으면**: `git clone` 대신 메인 PC에서 `scp`로 `agent.py`, `power_reader.py`, `icdf-agent.service`를 보내면 됩니다.
 
 메인 PC에서 확인:
 ```bash
@@ -75,7 +81,7 @@ python -m controller.main --day 2025-03-10 --ours --gui --port /dev/ttyACM0 \
 - 칸(시연에서 2.5초)마다 그동안 잰 평균 전력에서 **대기 전력을 뺀 값**(작업 때문에 늘어난 전력)을 구합니다.
   대기 전력은 `agent.py`가 시작할 때 3초 동안 잽니다. 이때는 Jetson에 다른 일을 시키지 마세요.
 - 그 W가 **30분 동안** 이어졌다고 보고 `W x 0.5h x 탄소 집약도 x JETSON_POWER_SCALE`을 더합니다.
-- 화면 큰 숫자(누적 탄소)와 D2의 결정은 **지금처럼 가정 전력값**을 씁니다. 실측 탄소는 그 아래 따로 보여 줍니다.
+- 화면 큰 숫자(누적 탄소)와 D2의 결정은 **지금처럼 가정 전력값**을 씁니다. 실측 탄소는 `config.GUI_SHOW_MEASURED_CO2 = True`일 때만 그 아래 보여 줍니다 (기본은 숨김, W만 표시).
   Jetson 한 대는 수 W라 실측 탄소가 몇 g 수준입니다. 서버 규모로 보여 주고 싶으면 `JETSON_POWER_SCALE`을 키우세요.
 - `logs/run_*.csv`의 `B_meas_co2_g_prev`, `D2_meas_co2_g_prev` 열은 **직전 칸까지** 누적입니다 (전력은 칸이 끝나야 알 수 있으므로).
 
