@@ -20,6 +20,7 @@ class Shared:
         self.lock = threading.Lock()
         self.state: dict = {"status": "ready"}
         self.cloud = False
+        self.sensor: dict | None = None   # 조도센서 실시간 값 (화면 표시용)
         self.start_event = threading.Event()
 
     def set_state(self, state: dict):
@@ -30,6 +31,7 @@ class Shared:
         with self.lock:
             s = dict(self.state)
         s["cloud"] = self.cloud
+        s["sensor"] = self.sensor
         return json.dumps(s, ensure_ascii=False).encode("utf-8")
 
     def toggle_cloud(self) -> bool:
@@ -51,8 +53,9 @@ def start_server(shared: Shared, port: int = 8000) -> ThreadingHTTPServer:
         def do_GET(self):
             if self.path in ("/", "/index.html"):
                 self._send(GUI_HTML.read_bytes(), "text/html; charset=utf-8")
-            elif self.path in ("/classic", "/classic.html"):  # 예전 화면 (비상용)
-                self._send(GUI_HTML.with_name("classic.html").read_bytes(), "text/html; charset=utf-8")
+            elif self.path.strip("/").removesuffix(".html") in ("classic", "detail"):  # 다른 화면 (자세한 화면, 예전 화면)
+                name = self.path.strip("/").removesuffix(".html") + ".html"
+                self._send(GUI_HTML.with_name(name).read_bytes(), "text/html; charset=utf-8")
             elif self.path.startswith("/state"):
                 self._send(shared.get_json(), "application/json; charset=utf-8")
             else:

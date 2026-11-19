@@ -47,6 +47,43 @@ def load_longterm() -> list[dict]:
 LONGTERM = load_longterm()
 
 
+def cost_proof(cost_g: float) -> dict | None:
+    """변경 1회 비용이 cost_g일 때의 장기 시뮬레이션 결과 (sim/results의 람다별 표에서 계산).
+
+    전략마다 검증 기간(2024)에서 순이득이 가장 큰 람다를 고르고, 테스트 기간(2025~)의 값을 돌려줍니다.
+    순이득 kg = B(하루 전 고정) 대비 줄인 탄소 - 변경 횟수 x cost_g.
+    """
+    res = Path(__file__).resolve().parent.parent / "sim" / "results"
+    days = {"val": 366, "test": 685}   # sim/README.md의 기간 (2024 / 2025-01-01 ~ 2026-11-16)
+    try:
+        gap, sweep = {}, {}
+        for per in days:
+            with open(res / f"summary_{per}_default.csv", encoding="utf-8-sig") as f:
+                kg = {r["전략"].split()[0]: float(r["탄소 kg"]) for r in csv.DictReader(f)}
+            gap[per] = kg["B"] - kg["P"]
+            with open(res / f"lambda_sweep_{per}_default.csv", encoding="utf-8-sig") as f:
+                sweep[per] = {(r["전략"], float(r["람다 g"])): (float(r["하루 평균 변경"]), float(r["회복률 %"]))
+                              for r in csv.DictReader(f)}
+    except (OSError, KeyError, ValueError):
+        return None
+
+    def net(per, key):
+        ch, rec = sweep[per][key]
+        return rec / 100 * gap[per] - ch * days[per] * cost_g / 1000
+
+    out = {"cost": cost_g, "days": days["test"]}
+    for name in ("D1", "D2"):
+        lams = sorted(l for (n, l) in sweep["val"] if n == name and (n, l) in sweep["test"])
+        if not lams:
+            return None
+        best = max(lams, key=lambda l: net("val", (name, l)))
+        out[name] = {"lam": best, "changes": sweep["test"][(name, best)][0], "net_kg": round(net("test", (name, best)), 2)}
+    return out
+
+
+PROOF = cost_proof(config.CHANGE_COST_G)
+
+
 def read_key() -> str | None:
     if msvcrt and msvcrt.kbhit():
         return msvcrt.getwch().lower()
@@ -65,6 +102,61 @@ def handle_keys(shared: Shared):
         shared.start_event.set()
     elif k == "q":
         raise Quit
+
+
+def make_racks(forecast) -> list:
+    """같은 작업, 같은 예측으로 시작하는 스케줄러들. [0] = B(Google), [1] = D2(YAX), [2] = D1(Reactive, 화면 전용)."""
+    racks = [FixedScheduler(default_jobs(), forecast), CorrectingScheduler(default_jobs(), forecast)]
+    if config.GUI_SHOW_REACTIVE:
+        r = CorrectingScheduler(default_jobs(), forecast, error_model="delta")
+        r.name = "D1"
+        racks.append(r)
+    return racks
+
+
+class CloudSensor:
+    """조도센서 값을 구름 크기(탄소 신호에 더할 값)로 바꿉니다."""
+
+    def __init__(self, arduino: Arduino, shared: Shared):
+        self.arduino, self.shared = arduino, shared
+        self.base: float | None = None
+
+    def calibrate(self):
+        """지금 밝기를 기준(구름 없음)으로 잡습니다. 하루를 시작할 때마다 부릅니다."""
+        self.base = None
+        if not config.CLOUD_SENSOR or self.arduino.dry_run:
+            return
+        self.arduino.take_lux()
+        time.sleep(0.7)                     # 새 값 서너 개를 모음
+        lux = self.arduino.take_lux()
+        if lux is None:
+            print("조도센서: 값이 없습니다 → 버튼 구름만 사용")
+        elif lux < config.CLOUD_SENSOR_MIN_LUX:
+            print(f"조도센서: 기준 밝기가 너무 어둡습니다 ({lux:.0f} lux) → 버튼 구름만 사용")
+        else:
+            self.base = lux
+            print(f"조도센서: 기준 밝기 {lux:.0f} lux (지금 가려져 있으면 안 됩니다)")
+
+    def ratio(self, lux: float | None) -> float:
+        if self.base is None or lux is None:
+            return 0.0
+        r = max(0.0, min(1.0, (self.base - lux) / self.base))
+        return r if r >= config.CLOUD_SENSOR_DEADBAND else 0.0
+
+    def delta(self) -> float:
+        """지난 칸 동안의 평균 조도로 계산한 구름 크기."""
+        return config.CLOUD_SENSOR_MAX_DELTA * self.ratio(self.arduino.take_lux())
+
+    def publish(self):
+        """화면에 보여 줄 실시간 값."""
+        if self.arduino.dry_run or not config.CLOUD_SENSOR:
+            self.shared.sensor = None
+            return
+        lux = self.arduino.lux if self.arduino.sensor_ok() else None
+        r = self.ratio(lux)
+        self.shared.sensor = {"lux": None if lux is None else round(lux, 1),
+                              "base": None if self.base is None else round(self.base, 1),
+                              "pct": round(r * 100), "delta": round(config.CLOUD_SENSOR_MAX_DELTA * r)}
 
 
 def snapshot(status, day, t, forecast, observed, cloud_hist, racks, co2, hardware,
@@ -91,6 +183,7 @@ def snapshot(status, day, t, forecast, observed, cloud_hist, racks, co2, hardwar
                 "changes": r.changes,
                 "running": len(r.plan[t]) if 0 <= t < config.SLOTS_PER_DAY else 0,
                 "plan": [len(p) for p in r.plan],
+                "moved_now": sum(1 for e in getattr(r, "events", []) if e["t"] == t),
             } for r in racks
         },
         "events": d2.events,
@@ -101,16 +194,18 @@ def snapshot(status, day, t, forecast, observed, cloud_hist, racks, co2, hardwar
         "error_model": d2.error_model,
         "facts": config.MODEL_FACTS,
         "longterm": LONGTERM,
+        "change_cost": config.CHANGE_COST_G,
+        "proof": PROOF,
         "kwh": config.KWH_PER_SLOT,
         "jobs": len(d2.jobs),
-        "cloud_delta": config.CLOUD_DELTA,
+        "cloud_delta": max(config.CLOUD_DELTA, config.CLOUD_SENSOR_MAX_DELTA if config.CLOUD_SENSOR else 0),
         "hardware": hardware,
         "jetson": jet,
     }
 
 
-def run_day(day, forecast, actual, arduino, shared, cloud_slots, hardware, log_dir, jetsons):
-    racks = [FixedScheduler(default_jobs(), forecast), CorrectingScheduler(default_jobs(), forecast)]
+def run_day(day, forecast, actual, arduino, shared, cloud_slots, hardware, log_dir, jetsons, sensor):
+    racks = make_racks(forecast)
     co2 = {r.name: 0.0 for r in racks}
     measured = {r.name: 0.0 for r in racks}   # Jetson 실측 전력으로 계산한 탄소 (연결된 랙만)
 
@@ -126,8 +221,10 @@ def run_day(day, forecast, actual, arduino, shared, cloud_slots, hardware, log_d
     w = csv.writer(fp)
     w.writerow(["slot", "forecast", "actual", "cloud", "observed",
                 "B_running", "D2_running", "B_co2_g", "D2_co2_g", "D2_changes",
-                "B_meas_co2_g_prev", "D2_meas_co2_g_prev"])  # Jetson 실측: 직전 칸까지 누적
+                "B_meas_co2_g_prev", "D2_meas_co2_g_prev",   # Jetson 실측: 직전 칸까지 누적
+                "cloud_delta"])                               # 구름으로 더한 값 (버튼 또는 조도센서)
 
+    sensor.calibrate()
     print(f"\n{day} 재생 시작")
     try:
         for t in range(config.SLOTS_PER_DAY):
@@ -135,8 +232,10 @@ def run_day(day, forecast, actual, arduino, shared, cloud_slots, hardware, log_d
 
             if cloud_slots:
                 shared.cloud = t in cloud_slots
-            cloud = shared.cloud
-            obs = actual[t] + (config.CLOUD_DELTA if cloud else 0)
+            # 구름 크기: 버튼(고정값)과 조도센서(가린 만큼) 중 큰 쪽
+            cloud_delta = max(config.CLOUD_DELTA if shared.cloud else 0, sensor.delta())
+            cloud = cloud_delta > 0
+            obs = actual[t] + cloud_delta
             observed.append(obs)
             cloud_hist.append(cloud)
 
@@ -144,7 +243,7 @@ def run_day(day, forecast, actual, arduino, shared, cloud_slots, hardware, log_d
             for rack in racks:
                 running = rack.step(t, obs)
                 co2[rack.name] += len(running) * config.KWH_PER_SLOT * obs
-                for i, fan in enumerate(config.FAN_IDS[rack.name]):
+                for i, fan in enumerate(config.FAN_IDS.get(rack.name, [])):   # Reactive(D1)는 팬 없음
                     arduino.set_fan(fan, i < len(running))
                 row[rack.name] = running
             arduino.set_led(to_led(obs))
@@ -155,16 +254,17 @@ def run_day(day, forecast, actual, arduino, shared, cloud_slots, hardware, log_d
 
             shared.set_state(snapshot("running", day, t, forecast, observed, cloud_hist, racks, co2, hardware,
                                       jetsons, measured))
-            print(f"{t // 2:02d}:{30 * (t % 2):02d}  탄소 {obs:5.0f}{' 구름' if cloud else '     '}"
+            print(f"{t // 2:02d}:{30 * (t % 2):02d}  탄소 {obs:5.0f}{f' 구름+{cloud_delta:3.0f}' if cloud else '         '}"
                   f"  B {len(row['B'])}개  D2 {len(row['D2'])}개"
                   f"  누적 B {co2['B']:6.0f} g / D2 {co2['D2']:6.0f} g  변경 {racks[1].changes}")
             w.writerow([t, forecast[t], actual[t], int(cloud), obs, "|".join(row["B"]), "|".join(row["D2"]),
                         round(co2["B"], 1), round(co2["D2"], 1), racks[1].changes,
-                        round(measured["B"], 3), round(measured["D2"], 3)])
+                        round(measured["B"], 3), round(measured["D2"], 3), round(cloud_delta, 1)])
             fp.flush()
 
             while time.monotonic() < slot_end:
                 handle_keys(shared)
+                sensor.publish()
                 time.sleep(0.02)
         if jetsons.enabled:
             account(config.SLOTS_PER_DAY - 1)
@@ -224,20 +324,21 @@ def main():
     if jetsons.enabled:
         hardware += " · Jetson " + ", ".join(f"{k} {'연결됨' if l.online else '연결 안 됨'}" for k, l in jetsons.links.items())
     shared = Shared()
+    sensor = CloudSensor(arduino, shared)
     log_dir = Path(__file__).resolve().parent.parent / "logs"
     log_dir.mkdir(exist_ok=True)
 
     try:
         if not args.gui:
             print("c = 구름, q = 종료")
-            run_day(args.day, forecast, actual, arduino, shared, cloud_slots, hardware, log_dir, jetsons)
+            run_day(args.day, forecast, actual, arduino, shared, cloud_slots, hardware, log_dir, jetsons, sensor)
             return
 
         start_server(shared, args.http_port)
         url = f"http://127.0.0.1:{args.http_port}/"
-        empty = [FixedScheduler(default_jobs(), forecast), CorrectingScheduler(default_jobs(), forecast)]
+        empty = make_racks(forecast)
         shared.set_state(snapshot("ready", args.day, -1, forecast, [], [], empty,
-                                  {"B": 0.0, "D2": 0.0}, hardware, jetsons))
+                                  {r.name: 0.0 for r in empty}, hardware, jetsons))
         print(f"화면: {url}  (화면의 [시작] 또는 s = 시작, c = 구름, q = 종료)")
         if not args.no_browser:
             webbrowser.open(url)
@@ -245,8 +346,9 @@ def main():
             shared.start_event.clear()
             while not shared.start_event.is_set():
                 handle_keys(shared)
+                sensor.publish()
                 time.sleep(0.05)
-            run_day(args.day, forecast, actual, arduino, shared, cloud_slots, hardware, log_dir, jetsons)
+            run_day(args.day, forecast, actual, arduino, shared, cloud_slots, hardware, log_dir, jetsons, sensor)
     except (KeyboardInterrupt, Quit):
         print("종료")
     finally:

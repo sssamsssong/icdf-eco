@@ -4,6 +4,7 @@
 #   ./demo.sh 2025-06-15      날짜 바꾸기
 #   ./demo.sh --dry-run       아두이노 없이 화면만
 #   ./demo.sh --no-jetson     Jetson 없이
+#   ./demo.sh --detail        자세한 화면 (단계·계산식·검증 표)
 #   ./demo.sh --classic       예전 화면으로 열기
 #   ./demo.sh --rehearsal     리허설: 30분 한 칸을 0.5초로 (하루 약 24초)
 # 그 밖의 옵션은 그대로 controller.main에 넘어갑니다 (예: --cloud 8-22, --slot-seconds 1).
@@ -17,15 +18,16 @@ JETSON_D2="10.0.0.12"
 WIRED_CON="유선 연결 1"      # 메인 PC 유선 연결 이름 (10.0.0.1)
 PORT_HTTP=8000
 
-use_arduino=1; use_jetson=1; classic=0; extra=()
+use_arduino=1; use_jetson=1; page=""; extra=()
 for a in "$@"; do
   case "$a" in
     20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]) DAY="$a" ;;
     --dry-run)   use_arduino=0 ;;
     --no-jetson) use_jetson=0 ;;
-    --classic)   classic=1 ;;
+    --classic)   page="classic" ;;
+    --detail)    page="detail" ;;
     --rehearsal) extra+=(--slot-seconds 0.5) ;;
-    -h|--help)   sed -n 2,10p "$0"; exit 0 ;;
+    -h|--help)   sed -n 2,11p "$0"; exit 0 ;;
     *)           extra+=("$a") ;;
   esac
 done
@@ -84,7 +86,7 @@ if [ $use_jetson = 1 ]; then
 fi
 
 url="http://127.0.0.1:$PORT_HTTP/"
-[ $classic = 1 ] && url="${url}classic"
+url="${url}${page}"
 
 # 엔진이 뜨면 브라우저를 엶 (F11 = 전체 화면)
 (
