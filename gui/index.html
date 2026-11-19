@@ -37,6 +37,9 @@ button:focus-visible { outline: 2px solid var(--d2); outline-offset: 2px; }
 header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 28px; }
 header h1 { margin: 0; font-size: 1.6rem; font-weight: 700; }
 header .tagline { font-size: 1.1rem; color: var(--muted); }
+header .scen { font-size: 1.05rem; font-weight: 700; color: var(--bg); background: var(--d2); border-radius: 8px; padding: 2px 12px; margin-left: 10px; vertical-align: middle; }
+header .scen:empty { display: none; }
+.clock .day { font-size: 1rem; color: var(--d2); font-weight: 700; }
 header .tagline b { color: var(--d2); }
 .clock { margin-left: auto; display: flex; align-items: baseline; gap: 12px; }
 .clock .t { font-family: var(--num); font-size: 2.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -117,7 +120,7 @@ footer .src { color: var(--faint); font-size: 0.78rem; }
 <div class="wrap">
   <header>
     <div>
-      <h1>탄소 인지 AI 데이터센터 스케줄러</h1>
+      <h1>탄소 인지 AI 데이터센터 스케줄러 <span class="scen" id="scen"></span></h1>
       <div class="tagline">예측이 틀렸을 때, <b>AI가 오차를 다시 예측해서 꼭 필요할 때만</b> 계획을 고칩니다</div>
     </div>
     <div class="clock">
@@ -328,7 +331,9 @@ function pBorig(s, t) { return s.racks.B.plan[t]; }
 
 /* ---------- 결과 ---------- */
 /* 누적 탄소 = 실행 탄소 + 계획 변경 횟수 x 변경 1회 비용 */
-const total = (s, name) => s.racks[name].co2 + s.racks[name].changes * (s.change_cost || 0);
+const carry = (s, name) => (s.carry && s.carry[name]) || { co2: 0, changes: 0, cloud_run: 0 };
+const changesAll = (s, name) => carry(s, name).changes + s.racks[name].changes;
+const total = (s, name) => carry(s, name).co2 + s.racks[name].co2 + changesAll(s, name) * (s.change_cost || 0);
 function drawResult(s) {
   const three = !!s.racks.D1;
   $("result").classList.toggle("three", three);
@@ -336,12 +341,11 @@ function drawResult(s) {
   for (const name of three ? ["B", "D1", "D2"] : ["B", "D2"]) {
     const r = s.racks[name];
     $("co2" + name).firstChild.nodeValue = fmt(total(s, name));
-    let bad = 0;
-    for (let t = 0; t < s.cloud_hist.length; t++) if (s.cloud_hist[t] && ran(s, t)) bad += r.plan[t];
+    const bad = carry(s, name).cloud_run + (r.cloud_run || 0), ch = changesAll(s, name);
     const b = $("bad" + name);
     const cc = s.change_cost || 0;
-    b.innerHTML = `구름 속 실행 <b>${bad}</b>칸` + (name === "B" ? "" : `<br>계획 변경 <b style="color:var(--fg)">${r.changes}</b>회`
-      + (cc ? ` <span class="n" style="font-size:.85rem">(+${fmt(r.changes * cc)} g)</span>` : ""));
+    b.innerHTML = `구름 속 실행 <b>${bad}</b>칸` + (name === "B" ? "" : `<br>계획 변경 <b style="color:var(--fg)">${ch}</b>회`
+      + (cc ? ` <span class="n" style="font-size:.85rem">(+${fmt(ch * cc)} g)</span>` : ""));
     b.classList.toggle("hot", bad > 0);
     if (name === "D1") continue;   // Reactive는 팬·Jetson 없음
     const fans = $("fans" + name);
@@ -352,7 +356,7 @@ function drawResult(s) {
       : `Jetson <b class="n" style="color:var(--fg)">${j.watts == null ? "-" : j.watts.toFixed(1)} W</b>`;
   }
   const b = total(s, "B"), d = total(s, "D2"), dd = b - d;
-  $("diff").innerHTML = s.status === "ready" ? '<span class="mut">같은 작업 · 같은 마감 · 같은 전기</span>'
+  $("diff").innerHTML = s.status === "ready" ? `<span class="mut">같은 작업 ${s.jobs}개 · 같은 마감 · 같은 전기</span>`
     : Math.abs(dd) < 1 ? '<span class="mut">아직 차이 없음</span>'
     : dd > 0 ? `YAX가 Google보다 <b>${fmt(dd)} g</b> 덜 배출 <span class="or n">(−${(dd / b * 100).toFixed(1)}%)</span>`
     : '<span class="mut">YAX가 미뤄 둔 작업을 실행하는 중</span>';
@@ -415,17 +419,21 @@ function drawSpark(s, tr, svg) {
 }
 
 function drawHead(s) {
+  const meta = s.meta || {}, nd = meta.days_total || 1, di = meta.day_index || 1;
+  $("scen").textContent = meta.title || "";
   $("clock").textContent = s.status === "ready" ? "00:00" : hhmm(s.slot);
-  $("status").textContent = { ready: "시작을 누르세요", running: "재생 중", done: "하루 끝" }[s.status];
+  const dayTxt = nd > 1 ? `<span class="day">${di}일째 / ${nd}일</span><br>` : "";
+  $("status").innerHTML = dayTxt + { ready: "시작을 누르세요", running: "재생 중", between: "하루 끝 · 다음 날로", done: nd > 1 ? `${nd}일 끝` : "하루 끝" }[s.status];
   const st = $("btnStart");
-  st.disabled = s.status === "running";
-  st.textContent = s.status === "done" ? "다시 시작" : s.status === "running" ? "재생 중" : "시작";
+  st.disabled = s.status === "running" || s.status === "between";
+  st.textContent = s.status === "done" ? "다시 시작" : s.status === "ready" ? "시작" : "재생 중";
   const c = $("btnCloud");
   c.setAttribute("aria-pressed", String(s.cloud));
-  c.textContent = s.cloud ? "구름 걷기" : "구름 올리기";
+  c.disabled = !!s.scripted;
+  c.textContent = s.scripted ? (s.cloud ? "구름 (자동)" : "구름 자동") : s.cloud ? "구름 걷기" : "구름 올리기";
   // 구름 스테이션 (조도센서)
   const sn = s.sensor, box = $("sensor");
-  box.hidden = !sn;
+  box.hidden = !sn || !!s.scripted;
   if (sn) {
     box.classList.toggle("on", sn.delta > 0);
     box.innerHTML = sn.lux == null ? '<span class="offline">조도센서 값 없음</span>'
@@ -435,7 +443,7 @@ function drawHead(s) {
   const find = (k) => (s.longterm || []).find((r) => r.name.startsWith(k + " "));
   const C = find("C"), D = find("D2"), R1 = find("D1"), pf = s.proof;
   const kg = (v) => v.net_kg > 0.05 ? `Google보다 <b>${v.net_kg.toFixed(1)} kg</b> 줄임 (하루 ${v.changes.toFixed(1)}번 변경)` : "바꿀수록 손해 → <b>이득 0</b>";
-  $("costNote").textContent = s.change_cost ? `실행 탄소 + 계획 변경 1회당 ${s.change_cost} g` : "";
+  $("costNote").textContent = (nd > 1 ? `${di}일째까지 합계 · ` : "") + (s.change_cost ? `실행 탄소 + 계획 변경 1회당 ${s.change_cost} g` : "");
   $("proof").innerHTML = pf && pf.cost > 0 && s.racks.D1
     ? `<b>실제 전력망 ${pf.days}일 검증</b> (계획 변경 1회 = ${pf.cost} g) · <span style="color:var(--r)">Reactive</span>: ${kg(pf.D1)} · <span class="or">YAX</span>: ${kg(pf.D2)}`
     : pf && pf.cost > 0

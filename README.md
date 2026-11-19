@@ -39,6 +39,9 @@ pip install -r requirements.txt
 ## 한 번에 켜기 (메인 PC, 우분투)
 
 ```bash
+icdf 1               # 발표 시나리오 1 · 긴 구름 (구름 자동)
+icdf 2               # 발표 시나리오 2 · 짧은 구름 여러 번 (구름 자동)
+icdf 3               # 발표 시나리오 3 · 5일 연속, 심사위원이 구름판으로 직접
 icdf                 # = ./demo.sh  아두이노·Jetson을 찾아서 붙이고 화면을 엶
 icdf --dry-run       # 아두이노 없이
 icdf --no-jetson     # Jetson 없이
@@ -47,6 +50,8 @@ icdf --detail        # 자세한 화면
 icdf --classic       # 예전 화면
 icdf 2025-06-15      # 날짜 바꾸기
 ```
+시나리오별 진행과 결과는 [docs/발표_시나리오.md](docs/발표_시나리오.md). 작업 큐는 날마다 무작위(seed 고정)이고, 예전 고정 작업 6개는 `--jobs fixed`.
+
 `icdf` 단축어는 `~/.bash_aliases`에 `alias icdf='~/icdf-eco/demo.sh'`로 등록되어 있습니다 (새 터미널부터 적용).
 시연 중 조작은 브라우저 화면에서 합니다 (Enter 시작, 스페이스 구름). 우분투 터미널에서는 `s`/`c`/`q` 키가 동작하지 않으니 끌 때는 Ctrl+C.
 

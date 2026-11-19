@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # 부스 시연을 한 번에 켭니다 (메인 PC, 우분투).
+#   ./demo.sh 1               발표 시나리오 1: 긴 구름 (구름 자동)
+#   ./demo.sh 2               발표 시나리오 2: 짧은 구름 여러 번 (구름 자동)
+#   ./demo.sh 3               발표 시나리오 3: 5일 연속, 심사위원이 구름판으로 직접
 #   ./demo.sh                 기본 날짜로 시연 (아두이노·Jetson은 있으면 자동으로 붙음)
 #   ./demo.sh 2025-06-15      날짜 바꾸기
 #   ./demo.sh --dry-run       아두이노 없이 화면만
@@ -12,7 +15,8 @@
 set -u
 cd "$(dirname "$(readlink -f "$0")")"
 
-DAY="2025-03-10"
+DAY=""                     # 비우면 시나리오 날짜 또는 2025-03-10
+SCENARIO=""
 JETSON_B="10.0.0.11"
 JETSON_D2="10.0.0.12"
 WIRED_CON="유선 연결 1"      # 메인 PC 유선 연결 이름 (10.0.0.1)
@@ -22,12 +26,13 @@ use_arduino=1; use_jetson=1; page=""; extra=()
 for a in "$@"; do
   case "$a" in
     20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]) DAY="$a" ;;
+    1|2|3|long|short|free) SCENARIO="$a" ;;
     --dry-run)   use_arduino=0 ;;
     --no-jetson) use_jetson=0 ;;
     --classic)   page="classic" ;;
     --detail)    page="detail" ;;
     --rehearsal) extra+=(--slot-seconds 0.5) ;;
-    -h|--help)   sed -n 2,11p "$0"; exit 0 ;;
+    -h|--help)   sed -n 2,14p "$0"; exit 0 ;;
     *)           extra+=("$a") ;;
   esac
 done
@@ -35,7 +40,8 @@ done
 ok()   { printf '  \e[32m✓\e[0m %s\n' "$*"; }
 warn() { printf '  \e[33m!\e[0m %s\n' "$*"; }
 
-echo "ICDF_eco 시연 준비 ($DAY)"
+[ -z "$SCENARIO" ] && [ -z "$DAY" ] && DAY="2025-03-10"
+echo "ICDF_eco 시연 준비 (${SCENARIO:+시나리오 $SCENARIO }${DAY})"
 
 # 파이썬 (.venv가 있으면 그걸 씀)
 PY=python3
@@ -48,7 +54,9 @@ if pgrep -f "[c]ontroller.main" >/dev/null; then
 fi
 
 # 아두이노
-args=(--day "$DAY" --ours --gui --no-browser --http-port "$PORT_HTTP")
+args=(--ours --gui --no-browser --http-port "$PORT_HTTP")
+[ -n "$DAY" ] && args+=(--day "$DAY")
+[ -n "$SCENARIO" ] && args+=(--scenario "$SCENARIO")
 if [ $use_arduino = 1 ]; then
   port=$(ls /dev/ttyACM* /dev/ttyUSB* 2>/dev/null | head -1)
   if [ -n "$port" ]; then

@@ -2,10 +2,11 @@
 
 용어
 - 슬롯: 30분 한 칸. 하루 48칸.
-- 작업: 필요한 슬롯 수(need)와 마감 슬롯(deadline)을 가짐. 쪼개서 실행 가능.
+- 작업: 필요한 슬롯 수(need), 도착 슬롯(release, 이때부터 실행 가능), 마감 슬롯(deadline)을 가짐. 쪼개서 실행 가능.
 - 계획(plan): plan[t] = 슬롯 t에 돌릴 작업 id 목록 (최대 FANS_PER_RACK개).
 """
 import json
+import random
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,6 +22,7 @@ class Job:
     deadline: int           # 이 슬롯 전까지 끝나야 함 (0~48)
     urgent: bool = False    # 긴급 작업은 계획 고정, 옮기지 않음
     done: int = 0
+    release: int = 0        # 이 슬롯부터 실행 가능 (작업이 도착하는 시각). 0이면 하루 시작부터
 
 
 def default_jobs() -> list[Job]:
@@ -35,6 +37,29 @@ def default_jobs() -> list[Job]:
     ]
 
 
+def random_jobs(seed: int) -> list[Job]:
+    """시연용 무작위 작업 큐. 같은 seed면 같은 작업 (두 랙에 똑같이 주려고 seed로 만듦).
+
+    - 긴급 작업 1~2개: 하루 중 아무 때나 도착, 도착하자마자 실행, 짧은 마감
+    - 유연한 작업 8~11개: 도착 시각, 길이(1~4시간), 마감(필요 시간의 1.5배 ~ 하루 끝)이 제각각
+    전체 필요 칸은 랙 용량(48칸 x 팬 2개 = 96칸)의 약 절반이라, 옮겨 갈 빈자리가 남습니다.
+    """
+    rng = random.Random(seed)
+    n = config.SLOTS_PER_DAY
+    jobs = []
+    for i in range(rng.randint(1, 2)):
+        need = rng.randint(2, 4)
+        rel = rng.randint(0, n - need - 2)
+        jobs.append(Job(f"긴급-{i + 1}", need=need, deadline=min(n, rel + need + rng.randint(1, 3)), urgent=True, release=rel))
+    kinds = ["학습", "추론", "배치", "분석"]
+    for i in range(rng.randint(8, 11)):
+        need = rng.randint(2, 8)
+        rel = rng.randint(0, n - need * 2)
+        dl = min(n, rel + int(need * rng.uniform(1.5, 4.0)) + rng.randint(0, 12))
+        jobs.append(Job(f"{rng.choice(kinds)}-{i + 1}", need=need, deadline=max(dl, rel + need + 1), release=rel))
+    return jobs
+
+
 def plan_day_ahead(jobs: list[Job], forecast: list[float]) -> list[list[str]]:
     """하루 전 계획: 긴급 작업은 맨 앞에, 유연한 작업은 마감 안의 예측상 가장 깨끗한 슬롯에."""
     n = config.SLOTS_PER_DAY
@@ -43,9 +68,9 @@ def plan_day_ahead(jobs: list[Job], forecast: list[float]) -> list[list[str]]:
 
     for job in sorted(jobs, key=lambda j: (not j.urgent, j.deadline)):
         if job.urgent:
-            candidates = range(job.deadline)
+            candidates = range(job.release, job.deadline)
         else:
-            candidates = sorted(range(job.deadline), key=lambda t: forecast[t])
+            candidates = sorted(range(job.release, job.deadline), key=lambda t: forecast[t])
         placed = 0
         for t in candidates:
             if placed == job.need:
